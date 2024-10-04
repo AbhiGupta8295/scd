@@ -1,0 +1,82 @@
+Here’s an expanded list of 20 commonly used cloud resources across AWS, Azure, and GCP, covering a range of functionalities like compute, storage, security, and more:
+
+1. Virtual Machines (Compute)
+AWS: EC2 (Elastic Compute Cloud)
+Azure: Virtual Machines
+GCP: Compute Engine
+2. Object Storage
+AWS: S3 (Simple Storage Service)
+Azure: Blob Storage
+GCP: Google Cloud Storage
+3. Relational Databases (RDBMS)
+AWS: Amazon RDS (Relational Database Service)
+Azure: Azure SQL Database
+GCP: Cloud SQL
+4. NoSQL Databases
+AWS: DynamoDB
+Azure: Cosmos DB
+GCP: Firestore, Bigtable
+5. Serverless Compute
+AWS: AWS Lambda
+Azure: Azure Functions
+GCP: Cloud Functions
+6. Virtual Networks (Private Cloud)
+AWS: VPC (Virtual Private Cloud)
+Azure: Virtual Network (VNet)
+GCP: Virtual Private Cloud (VPC)
+7. Load Balancers
+AWS: Elastic Load Balancing (ELB)
+Azure: Azure Load Balancer
+GCP: Cloud Load Balancing
+8. Content Delivery Networks (CDN)
+AWS: Amazon CloudFront
+Azure: Azure CDN
+GCP: Cloud CDN
+9. Kubernetes Services (Managed Containers)
+AWS: EKS (Elastic Kubernetes Service)
+Azure: AKS (Azure Kubernetes Service)
+GCP: GKE (Google Kubernetes Engine)
+10. Block Storage
+AWS: EBS (Elastic Block Store)
+Azure: Managed Disks
+GCP: Persistent Disks
+11. File Storage
+AWS: EFS (Elastic File System)
+Azure: Azure Files
+GCP: Filestore
+12. Identity and Access Management (IAM)
+AWS: AWS IAM
+Azure: Azure Active Directory (AAD)
+GCP: Google Cloud IAM
+13. Cloud Monitoring and Logging
+AWS: CloudWatch, CloudTrail
+Azure: Azure Monitor, Log Analytics
+GCP: Cloud Monitoring, Logging (Stackdriver)
+14. Data Warehousing
+AWS: Amazon Redshift
+Azure: Azure Synapse Analytics
+GCP: BigQuery
+15. Big Data Processing
+AWS: EMR (Elastic MapReduce)
+Azure: Azure HDInsight, Azure Databricks
+GCP: Cloud Dataflow, Dataproc
+16. Managed Messaging Queues
+AWS: Amazon SQS (Simple Queue Service)
+Azure: Azure Service Bus
+GCP: Pub/Sub
+17. API Management
+AWS: API Gateway
+Azure: Azure API Management
+GCP: Google Cloud Endpoints
+18. Cloud Backup Services
+AWS: AWS Backup
+Azure: Azure Backup
+GCP: Google Cloud Storage Backup
+19. Disaster Recovery
+AWS: AWS Elastic Disaster Recovery
+Azure: Azure Site Recovery
+GCP: Managed replication services
+20. Managed Caching Services
+AWS: Amazon ElastiCache (for Redis, Memcached)
+Azure: Azure Cache for Redis
+GCP: Memorystore (for Redis, Memcached)
