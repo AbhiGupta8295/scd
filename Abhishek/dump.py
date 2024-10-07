@@ -96,3 +96,62 @@ if __name__ == "__main__":
     save_report_to_csv(report)
 
 #-----------------------------------------------------------------------------------------------------------------
+
+#------------------------------------io_handler.py------------------------------------
+import csv
+import os
+
+class IOHandler:
+    def __init__(self, input_dir='input', output_dir='output'):
+        self.input_dir = input_dir
+        self.output_dir = output_dir
+
+        # Create directories if they do not exist
+        if not os.path.exists(self.input_dir):
+            os.makedirs(self.input_dir)
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
+    def read_csv(self, filename):
+        """Read input data from a CSV file."""
+        file_path = os.path.join(self.input_dir, filename)
+        data = []
+        try:
+            with open(file_path, mode='r', newline='', encoding='utf-8') as file:
+                csv_reader = csv.DictReader(file)
+                for row in csv_reader:
+                    data.append(row)
+            return data
+        except FileNotFoundError:
+            print(f"File {file_path} not found. Please ensure the file is in the correct directory.")
+            return None
+        except Exception as e:
+            print(f"Error reading file {filename}: {str(e)}")
+            return None
+
+    def write_output(self, filename, content):
+        """Write the generated SCD output to a text file."""
+        file_path = os.path.join(self.output_dir, filename)
+        try:
+            with open(file_path, mode='w', encoding='utf-8') as file:
+                file.write(content)
+            print(f"Output successfully written to {file_path}")
+        except Exception as e:
+            print(f"Error writing to file {filename}: {str(e)}")
+
+    def get_user_input(self, prompt_text):
+        """Interact with user to get dynamic input."""
+        return input(prompt_text)
+
+    def list_input_files(self):
+        """List available CSV files in the input directory."""
+        files = [f for f in os.listdir(self.input_dir) if f.endswith('.csv')]
+        if not files:
+            print(f"No CSV files found in {self.input_dir}")
+        return files
+
+    def display_data(self, data):
+        """Pretty print the loaded data."""
+        for index, row in enumerate(data, start=1):
+            print(f"Record {index}: {row}")
+ #--------------------------------------------------__-------------------------------------------------
