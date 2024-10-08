@@ -154,4 +154,52 @@ class IOHandler:
         """Pretty print the loaded data."""
         for index, row in enumerate(data, start=1):
             print(f"Record {index}: {row}")
+
  #--------------------------------------------------__-------------------------------------------------
+
+
+#----------------------------------ai playground request------------------------------------------------
+import requests
+import json
+
+# Replace with your deployed AI model URL
+AI_MODEL_URL = "https://your-deployed-ai-model-url.com/api"
+
+# Define the payload data
+payload = {
+    "system_prompt": "Your system prompt here",
+    "user_prompt": "Your user prompt here",
+    "user_query": "Your user query here",
+    "parsed_content": "Your parsed content here",
+    "document": None  # Placeholder for your document dataset
+}
+
+# Specify headers for the request
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY_HERE",  # Replace with your API key or token if required
+}
+
+# Function to send POST request with JSON payload and document
+def send_request_with_document(document_path=None):
+    if document_path:
+        # If a document is provided, read it and include it in the payload
+        with open(document_path, 'r') as file:
+            document_data = file.read()
+        payload["document"] = document_data
+
+    # Send the POST request
+    response = requests.post(AI_MODEL_URL, headers=headers, data=json.dumps(payload))
+
+    # Check the response
+    if response.status_code == 200:
+        print("Request successful!")
+        print("Response:", response.json())
+    else:
+        print(f"Request failed with status code {response.status_code}")
+        print("Response:", response.text)
+
+# Example usage
+document_path = "path/to/your/document.txt"  # Replace with the actual document file path
+send_request_with_document(document_path)
+
