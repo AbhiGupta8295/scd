@@ -203,3 +203,104 @@ def send_request_with_document(document_path=None):
 document_path = "path/to/your/document.txt"  # Replace with the actual document file path
 send_request_with_document(document_path)
 
+#-------------------------------------------------------------------------------------------------------------
+pip install google-api-python-client google-auth google-cloud-logging google-cloud-resourcemanager
+
+import os
+import datetime
+from google.auth import default
+from googleapiclient.discovery import build
+from google.cloud import logging_v2
+
+# Define time threshold (3 months ago)
+time_threshold = datetime.datetime.utcnow() - datetime.timedelta(days=90)
+
+# Authentication using default credentials (e.g., service account)
+credentials, project_id = default()
+
+# Initialize the IAM and Logging services
+iam_service = build('iam', 'v1', credentials=credentials)
+logging_client = logging_v2.Client()
+
+# List all users and their assigned roles (bindings)
+def list_iam_roles():
+    roles_to_check = []
+    request = iam_service.projects().getIamPolicy(resource=project_id, body={})
+    policy = request.execute()
+    
+    for binding in policy['bindings']:
+        role = binding['role']
+        members = binding.get('members', [])
+        for member in members:
+            if member.startswith('user:'):  # Only checking user accounts
+                roles_to_check.append({'user': member, 'role': role})
+    
+    return roles_to_check
+
+# Query Cloud Logging for the role usage (fetch IAM policy changes)
+def check_role_usage(user_email, role):
+    filter_str = f"""
+    protoPayload.authenticationInfo.principalEmail="{user_email}" AND
+    protoPayload.serviceName="iam.googleapis.com" AND
+    protoPayload.methodName="SetIamPolicy" AND
+    protoPayload.authorizationInfo.resource="projects/{project_id}" AND
+    resource.labels.role="{role}"
+    """
+    
+    usage_found = False
+    last_used = None
+
+    for entry in logging_client.list_entries(filter_=filter_str):
+        log_time = entry.timestamp
+        
+        if log_time and log_time > time_threshold:
+            last_used = log_time
+            usage_found = True
+            break
+
+    return last_used if usage_found else None
+
+# Revoke unused roles by updating IAM policy
+def revoke_unused_roles(unused_roles):
+    policy = iam_service.projects().getIamPolicy(resource=project_id, body={}).execute()
+    bindings = policy['bindings']
+
+    # Filter out unused roles from the policy
+    for unused_role in unused_roles:
+        for binding in bindings:
+            if binding['role'] == unused_role['role'] and unused_role['user'] in binding['members']:
+                binding['members'].remove(unused_role['user'])
+                print(f"Revoked {unused_role['role']} from {unused_role['user']}")
+                break
+
+    # Update the IAM policy
+    body = {'policy': policy}
+    iam_service.projects().setIamPolicy(resource=project_id, body=body).execute()
+
+# Main function
+def main():
+    roles = list_iam_roles()
+    unused_roles = []
+
+    # Check last usage of each role
+    for role in roles:
+        user = role['user']
+        assigned_role = role['role']
+        last_used = check_role_usage(user, assigned_role)
+        
+        if last_used is None:
+            print(f"Role {assigned_role} assigned to {user} has not been used in the last 3 months.")
+            unused_roles.append(role)
+        else:
+            print(f"Role {assigned_role} assigned to {user} was last used on {last_used}.")
+
+    # Revoke unused roles
+    if unused_roles:
+        revoke_unused_roles(unused_roles)
+    else:
+        print("No unused roles found.")
+
+if __name__ == "__main__":
+    main()
+    
+
