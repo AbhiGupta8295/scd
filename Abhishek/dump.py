@@ -239,13 +239,12 @@ def list_iam_roles():
 
 # Query Cloud Logging for the role usage (fetch IAM policy changes)
 def check_role_usage(user_email, role):
-    filter_str = f"""
-    protoPayload.authenticationInfo.principalEmail="{user_email}" AND
-    protoPayload.serviceName="iam.googleapis.com" AND
-    protoPayload.methodName="SetIamPolicy" AND
-    protoPayload.authorizationInfo.resource="projects/{project_id}" AND
-    resource.labels.role="{role}"
-    """
+    #filter_str = f"""
+   # protoPayload.authenticationInfo.principalEmail="{user_email}" AND\
+  #  protoPayload.serviceName="iam.googleapis.com" AND\
+  #  protoPayload.methodName="SetIamPolicy" AND\
+ #   protoPayload.authorizationInfo.resource="projects/{project_id}" AND\
+ #   resource.labels.role="{role}"\"""
     
     usage_found = False
     last_used = None
@@ -302,5 +301,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
-
+  
+#---------------------------------_-----------------------------------------
+#https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-google-cloud-platform
