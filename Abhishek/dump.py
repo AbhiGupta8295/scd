@@ -304,3 +304,140 @@ if __name__ == "__main__":
   
 #---------------------------------_-----------------------------------------
 #https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-google-cloud-platform
+import datetime
+import csv
+from google.auth import default
+from googleapiclient.discovery import build
+from google.cloud import logging_v2
+
+# Define time threshold (3 months ago) and make it timezone-aware
+time_threshold = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=90)
+
+# Authentication using default credentials (e.g., service account)
+credentials, project_id = default()
+
+# Initialize the Resource Manager and Logging services
+crm_service = build('cloudresourcemanager', 'v1', credentials=credentials)
+logging_client = logging_v2.Client()
+
+# List all users and their assigned roles (IAM bindings)
+def list_iam_roles():
+    roles_to_check = []
+    
+    # Get the IAM policy for the project
+    policy_request = crm_service.projects().getIamPolicy(resource=project_id, body={})
+    policy = policy_request.execute()
+    
+    for binding in policy['bindings']:
+        role = binding['role']
+        members = binding.get('members', [])
+        for member in members:
+            if member.startswith('user:'):  # Only checking user accounts
+                roles_to_check.append({'user': member, 'role': role})
+    
+    return roles_to_check
+
+# Query Cloud Logging for the role usage (fetch IAM policy changes)
+def check_role_usage(user_email, role):
+    filter_str = f"""
+    protoPayload.authenticationInfo.principalEmail="{user_email}" AND
+    protoPayload.serviceName="iam.googleapis.com" AND
+    protoPayload.methodName="SetIamPolicy" AND
+    protoPayload.authorizationInfo.resource="projects/{project_id}" AND
+    resource.labels.role="{role}"
+    """
+    
+    usage_found = False
+    last_used = None
+
+    for entry in logging_client.list_entries(filter_=filter_str):
+        log_time = entry.timestamp
+        
+        # Ensure log_time is timezone-aware
+        if log_time.tzinfo is None:
+            log_time = log_time.replace(tzinfo=datetime.timezone.utc)
+
+        if log_time and log_time > time_threshold:
+            last_used = log_time
+            usage_found = True
+            break
+
+    return last_used if usage_found else None
+
+# Write the results to a CSV file
+def write_to_csv(data, filename='role_usage_report.csv'):
+    with open(filename, mode='w', newline='') as csvfile:
+        fieldnames = ['User', 'Role', 'Last Used', 'Status']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        # Write the header
+        writer.writeheader()
+
+        # Write the data rows
+        for row in data:
+            writer.writerow(row)
+
+    print(f"Report written to {filename}")
+
+# Revoke unused roles by updating IAM policy
+def revoke_unused_roles(unused_roles):
+    # Get the current IAM policy for the project
+    policy_request = crm_service.projects().getIamPolicy(resource=project_id, body={})
+    policy = policy_request.execute()
+    
+    bindings = policy['bindings']
+
+    # Filter out unused roles from the policy
+    for unused_role in unused_roles:
+        for binding in bindings:
+            if binding['role'] == unused_role['role'] and unused_role['user'] in binding['members']:
+                binding['members'].remove(unused_role['user'])
+                print(f"Revoked {unused_role['role']} from {unused_role['user']}")
+                break
+
+    # Update the IAM policy to remove unused roles
+    body = {'policy': policy}
+    crm_service.projects().setIamPolicy(resource=project_id, body=body).execute()
+
+# Main function
+def main():
+    roles = list_iam_roles()
+    unused_roles = []
+    csv_data = []
+
+    # Check last usage of each role
+    for role in roles:
+        user = role['user']
+        assigned_role = role['role']
+        last_used = check_role_usage(user, assigned_role)
+
+        if last_used is None:
+            print(f"Role {assigned_role} assigned to {user} has not been used in the last 3 months.")
+            unused_roles.append(role)
+            csv_data.append({
+                'User': user,
+                'Role': assigned_role,
+                'Last Used': 'Never Used',
+                'Status': 'To be revoked'
+            })
+        else:
+            print(f"Role {assigned_role} assigned to {user} was last used on {last_used}.")
+            csv_data.append({
+                'User': user,
+                'Role': assigned_role,
+                'Last Used': last_used.strftime('%Y-%m-%d %H:%M:%S'),
+                'Status': 'Active'
+            })
+
+    # Write to CSV
+    write_to_csv(csv_data)
+
+    # Revoke unused roles
+    if unused_roles:
+        revoke_unused_roles(unused_roles)
+    else:
+        print("No unused roles found.")
+
+if __name__ == "__main__":
+    main()
+    
