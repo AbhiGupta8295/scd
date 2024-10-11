@@ -339,13 +339,7 @@ def list_iam_roles():
 
 # Query Cloud Logging for the role usage (fetch IAM policy changes)
 def check_role_usage(user_email, role):
-    filter_str = f"""
-    protoPayload.authenticationInfo.principalEmail="{user_email}" AND
-    protoPayload.serviceName="iam.googleapis.com" AND
-    protoPayload.methodName="SetIamPolicy" AND
-    protoPayload.authorizationInfo.resource="projects/{project_id}" AND
-    resource.labels.role="{role}"
-    """
+ 
     
     usage_found = False
     last_used = None
@@ -441,3 +435,77 @@ def main():
 if __name__ == "__main__":
     main()
     
+#--------------------------------------------------------------------------------
+import os
+import google.auth
+from google.auth.transport.requests import Request
+from google.auth import impersonated_credentials
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from requests.exceptions import HTTPError
+import time
+
+# Retry logic for token refresh
+def refresh_credentials_with_retry(credentials, max_retries=3, delay=2):
+    for i in range(max_retries):
+        try:
+            credentials.refresh(Request())
+            return credentials
+        except HTTPError as e:
+            if i < max_retries - 1:
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff
+            else:
+                raise e
+
+# Set up impersonated credentials
+def get_impersonated_credentials():
+    service_account_credentials = service_account.Credentials.from_service_account_file(
+        'your-service-account.json',
+        scopes=['https://www.googleapis.com/auth/cloud-platform']
+    )
+    
+    target_principal = os.environ.get('TARGET_SERVICE_ACCOUNT')  # Target service account to impersonate
+    
+    # Create impersonated credentials
+    credentials = impersonated_credentials.Credentials(
+        source_credentials=service_account_credentials,
+        target_principal=target_principal,
+        target_scopes=['https://www.googleapis.com/auth/cloud-platform']
+    )
+    
+    # Refresh the impersonated credentials with retry logic
+    return refresh_credentials_with_retry(credentials)
+
+# Use impersonated credentials to make API calls
+def list_iam_roles():
+    try:
+        # Get impersonated credentials
+        credentials = get_impersonated_credentials()
+        
+        # Initialize Resource Manager API with impersonated credentials
+        crm_service = build('cloudresourcemanager', 'v1', credentials=credentials)
+        project_id = os.environ.get("PROJECT_ID")
+        
+        # Get IAM policy for the project
+        policy_request = crm_service.projects().getIamPolicy(resource=project_id, body={})
+        policy = policy_request.execute()
+
+        # List roles and members
+        roles_to_check = []
+        for binding in policy.get('bindings', []):
+            role = binding['role']
+            members = binding.get('members', [])
+            for member in members:
+                if member.startswith('user:'):  # Only check user accounts
+                    roles_to_check.append({'user': member, 'role': role})
+
+        return roles_to_check
+
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        return []
+
+# Example usage
+roles = list_iam_roles()
+print(roles)
