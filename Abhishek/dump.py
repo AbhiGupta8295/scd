@@ -549,4 +549,29 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+#----------------------------------_------------------------------
+AWS Role-Wise Usage Report - Description
+The AWS Role-Wise Usage Report is designed to provide a comprehensive view of the IAM roles assigned to users within an AWS account, detailing how frequently each role has been utilized in the last 90 days (3 months). The report is intended to help administrators and security teams audit the usage of IAM roles, identify inactive or underused roles, and optimize access management by revoking unused permissions to enhance security.
+
+The report includes the following key information:
+
+1. User Information
+User Name: The name of the IAM user assigned a particular role.
+User ARN (Amazon Resource Name): A globally unique identifier that specifies the AWS account and user.
+2. Role Information
+Role Name: The name of the IAM role assigned to the user.
+Role ARN: The unique identifier for the IAM role that provides the user specific permissions.
+3. Last Role Usage
+Last Used Date: The most recent date when the IAM role was used by the user. This field helps identify if the role has been actively used or remains dormant.
+Usage Frequency: The total number of times the user has assumed or used the IAM role within the last 90 days. Higher usage indicates frequent reliance on the role, whereas low or zero usage signals inactivity.
+4. Usage Status
+Active Roles: Roles that have been actively used by users within the last 90 days. These roles are essential for user operations and should be retained.
+Inactive Roles: Roles that have not been used in the last 90 days. These roles are candidates for review and potential revocation to minimize security risks and enforce the principle of least privilege.
+5. Recommendations
+For each role that hasn't been used in the past 90 days, the report will include a recommendation to revoke or deactivate the role from the assigned user to improve security posture.
+For frequently used roles, the report may recommend role consolidation or review of attached policies to ensure that only necessary permissions are granted.
+Usage Insights:
+Date Range: The report covers data from the last 90 days (3 months), providing an accurate snapshot of role activity during this period.
+Role Management: The report helps AWS administrators easily manage IAM roles by highlighting active and inactive roles, optimizing access control, and ensuring unused permissions are not left in the environment.
+Security Enhancement: Regular review of role assignments and usage helps secure the AWS environment by reducing the risk of over-provisioned access.
+#-----------------------------------------------------------------------
