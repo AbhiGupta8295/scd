@@ -509,3 +509,44 @@ def list_iam_roles():
 # Example usage
 roles = list_iam_roles()
 print(roles)
+#--------------------------------------------------------------------------
+from google.auth import default
+from googleapiclient.discovery import build
+import time
+import logging
+from googleapiclient.errors import HttpError
+
+logging.basicConfig(level=logging.DEBUG)
+
+# Get default credentials and project ID
+credentials, project_id = default()
+
+# Initialize the Cloud Resource Manager service
+crm_service = build('cloudresourcemanager', 'v1', credentials=credentials)
+
+# Function to get IAM policy with retry logic
+def get_iam_policy_with_retry(project_id, max_retries=3):
+    attempts = 0
+    while attempts < max_retries:
+        try:
+            request = crm_service.projects().getIamPolicy(resource=project_id, body={})
+            response = request.execute()  # Execute the request
+            return response  # Return the response if successful
+        except HttpError as e:
+            print(f"Attempt {attempts + 1} failed: {str(e)}")
+            attempts += 1
+            time.sleep(2 ** attempts)  # Exponential backoff after failure
+    
+    raise Exception("Failed to retrieve IAM policy after multiple attempts")
+
+# Main function to retrieve and print the IAM policy
+def main():
+    try:
+        policy = get_iam_policy_with_retry(project_id)
+        print("IAM Policy:", policy)
+    except Exception as e:
+        print(f"Error retrieving IAM policy: {str(e)}")
+
+if __name__ == "__main__":
+    main()
+    
