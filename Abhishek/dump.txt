@@ -928,3 +928,130 @@ Execute the script in a GCP project environment. It will generate a user_role_re
 Reviewing the report:
 
 Open the generated CSV file to review the roles, their last used time, and whether they are flagged for revocation based on inactivity.
+-_-_-__-__---_-_-_--_-_-_-_-----__-_&-_--_-_-_-_-_-_-_--_-_-_-_-_-_-_-_-_-_-_-_--_-_-_-_-_-_-_--_-_-_-_-_-_-_-_-_--_-_-_-_-_
+
+AWS IAM Role Usage Report and GitHub Action Pipeline
+This repository provides a Python script to generate an AWS IAM role usage report and a corresponding GitHub Actions pipeline for automated execution. The Python script lists all AWS IAM users, retrieves the roles they have used, and generates a CSV report with the most frequently used roles in the past 90 days. The GitHub Actions workflow automates this process, including running a SonarQube scan and leveraging OIDC for secure authentication with AWS.
+
+Table of Contents
+Overview
+Python Script Description
+Requirements
+Script Breakdown
+GitHub Actions Workflow
+Prerequisites
+Workflow Breakdown
+How to Trigger the Workflow
+Generating the Report
+SonarQube Integration
+How to Set Up
+AWS OIDC Authentication
+Run Locally
+Overview
+The purpose of this project is to track IAM role usage in your AWS account and generate a report of user activity over the last 90 days. This project is automated using GitHub Actions, so you can easily execute the script and store results in your repository.
+
+The workflow also includes a SonarQube scan to ensure code quality as part of your CI pipeline. Authentication to AWS is handled using OIDC, allowing secure, token-based authentication.
+
+Python Script Description
+The Python script, located at generate_iam_report.py, performs the following tasks:
+
+Lists all IAM users in your AWS account.
+Retrieves attached policies and IAM roles associated with each user.
+Checks CloudTrail logs to find the frequency and last usage of each role for the past 90 days.
+Generates a CSV report listing users, roles, the last time the role was used, and usage frequency.
+Requirements
+Ensure you have the following installed before running the script:
+
+Python 3.7+
+boto3 (AWS SDK for Python)
+AWS Credentials configured for your environment (for local execution).
+Install the required dependencies using:
+pip install boto3
+Script Breakdown
+Functions:
+list_users():
+
+Lists all IAM users in the account.
+Uses the AWS IAM API to fetch the list.
+get_user_roles(user_name):
+
+Retrieves the roles attached to a specific IAM user.
+Parses through the attached policies to identify AssumeRole permissions.
+get_role_usage(role_name):
+
+Searches CloudTrail logs for AssumeRole events to determine when the role was last used and how often.
+generate_user_role_report():
+
+Aggregates the users and their associated role usage into a report.
+save_report_to_csv():
+
+Saves the report to a CSV file for further analysis.
+How to Run
+Run the script locally:
+
+bash
+Copy code
+python generate_iam_report.py
+The script generates a file named user_role_report.csv in the root directory, which contains the following fields:
+
+UserName: Name of the IAM user.
+RoleName: The name of the IAM role assigned to the user.
+LastUsed: The last date the role was used or "Never" if not used in the last 90 days.
+UsageFrequency: How many times the role was used in the last 90 days.
+GitHub Actions Workflow
+The GitHub Actions pipeline automates the process of running the IAM role usage script and performing code quality checks with SonarQube. Below is the breakdown of each step in the GitHub Action.
+
+Prerequisites
+GitHub OIDC configuration for secure AWS authentication.
+SonarQube server URL and token to run the code scan.
+The required AWS IAM roles for the OIDC authentication (configured in the AWS account).
+Workflow Breakdown
+The GitHub Action pipeline is defined in the file github-action.yml. Below is a breakdown of the stages:
+Key Steps
+Checkout Repository:
+
+This step checks out the GitHub repository code so that the workflow can access the Python script and other resources.
+Set Up Python:
+
+Sets up Python 3.9 in the GitHub Actions runner environment.
+Install Dependencies:
+
+Installs boto3, the required Python package to interact with AWS APIs.
+Configure AWS OIDC Login:
+
+Authenticates with AWS using OpenID Connect (OIDC). This step assumes an IAM role in AWS with the necessary permissions to query IAM and CloudTrail.
+SonarQube Scan:
+
+Runs a SonarQube scan to check the code for quality, vulnerabilities, and bugs. Requires the SonarQube server token and URL, which are configured as GitHub secrets.
+Run Python Script:
+
+Executes the Python script that generates the IAM role usage report.
+Upload CSV Artifact:
+
+After the Python script completes, the generated user_role_report.csv file is uploaded as an artifact to the GitHub Actions tab for download.
+How to Trigger the Workflow
+Automatic Trigger: The workflow runs automatically when code is pushed to the main branch.
+Manual Trigger: You can manually trigger the workflow from the GitHub Actions tab.
+Generating the Report
+After the workflow finishes, you can download the user_role_report.csv from the "Artifacts" section in the GitHub Actions interface. This report provides details about each IAM user and the roles they have used over the past 90 days.
+
+SonarQube Integration
+The repository includes a SonarQube scan to ensure the code follows best practices. SonarQube is configured via GitHub Secrets for SONAR_TOKEN and SONAR_HOST_URL. These values should be added to your GitHub repository's secrets.
+
+How to Set Up
+AWS OIDC Authentication
+Create an IAM Role in your AWS account to be used by GitHub Actions. Attach the necessary permissions for IAM and CloudTrail.
+Configure GitHub OIDC to authenticate with AWS by following the official guide.
+Run Locally
+To run the script locally, follow these steps:
+
+Set up AWS credentials on your local machine using the AWS CLI or environment variables.
+Install dependencies:
+bash
+Copy code
+pip install boto3
+Run the Python script:
+bash
+Copy code
+python generate_iam_report.py
+The script will generate a user_role_report.csv in the current directory.
