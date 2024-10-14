@@ -676,3 +676,188 @@ john.doe	arn:aws:iam::123456789012
 jane.smith	arn:aws:iam::123456789012
 /ReadOnlyRole	Never	0
 
+----_-_-_-_--_-_-__&_--_-_-_-_&-_-_-_-_-_-__-_--_-_-_-_-_-_-_-__-_-_-___-_-_-_-_-_-_-_-_-_
+import os
+
+import datetime
+
+from google.auth.transport.requests import Request
+
+from google.auth import default
+
+from google.auth import impersonated_credentials
+
+from google.oauth2 import service_account
+
+from requests.exceptions import HTTPError from googleapiclient.discovery import build
+
+from google.cloud import logging_v2
+
+from dotenv import load_dotenv
+
+Import requests
+
+Import esv
+
+import requests
+
+from googleapiclient.errors import HttpError
+
+#request google.auth.transport.requests.Request()
+
+load_dotenv()
+
+#Define time threshold (90 days)
+
+time_threshold datetime.datetime.now(datetime.timezone.utc) datetime.timedelta(days-days)
+
+days - 90
+
+#Authentication using default credentials (e.g., service account)
+
+credentials, project_id default()
+
+#credentials.refresh(request)
+
+project_id = os.environ.get("GCP_PROJECT_ID")
+
+project_id -
+
+Initialize Logging services
+
+cra_service build("cloudresourcemanager", "v1", credentials-credentials)
+
+logging client logging v2.Client()
+
+#List all users and their assigned roles (bindings)
+
+def list_iam_roles():
+def list_iam_roles():
+
+#request lan_service.projects().getIamPolicy(resource-project_id, body-())
+
+roles_to_check[]
+
+try:
+
+policycra service.projects().getIamPolicy(resource-project_id, body-()).execute() # Execute the request
+
+policy request.execute()
+
+print("policy: ", policy)
+
+14 policy:
+
+for binding in policy["bindings"]:
+
+role binding "role"]
+
+members binding.get("members", [])
+
+for member in members:
+
+#print("members:", member)
+
+I
+
+1f member.startswith("user:"): Only checking user accounts
+
+roles_to_check.append({"user": member, "role": role))
+
+return roles_to_check
+
+except HttpError as e:
+
+print(f"failed: {str(e)}")
+
+raise Exception("Failed to retrieve IAM policy after multiple attempts")
+
+Query Cloud Logging for the role usage (fetch IAM policy changes)
+
+def check_role_usage():
+
+usage found False
+
+last used fione
+
+for entry in logging_client.list_entries():
+
+log time entry.timestamp
+
+if log time.tzinfo is None:
+
+log time log time.replace(tzinfo-datetime.timezone.utc)
+if log time:
+
+last used log time
+
+usage found True
+
+break
+
+return last used if usage found else None
+
+I
+
+def write to csv(data, filename='user_role_report.csv'): with open(filename, node 'a', newline-") as csvfile: Fieldnames= ['User', 'Role', 'Last Used', 'Status'] writer = csv.DictWriter(csvfile, fieldnames-fieldnames)
+
+#Write the header writer.writeheader()
+
+#Write the data rows for row in data: writer.writerow(row)
+
+print(f"Report written to {filename}")
+
+#Main function
+
+def main(): roles list_iam_roles() unused roles [] csv data-[]
+
+#Check last usage of each role
+#Check last usage of each role
+
+For role in roles:
+
+user = rolet "user"]
+
+assigned role role["role"]
+
+I
+
+})
+
+last used check_role_usage()
+
+if last used is None:
+
+unused_roles.append(role)
+
+csv_data.append({
+
+'User': user,
+
+"Role': assigned_role,
+
+"Last Used': 'Never Used",
+
+"Status': 'To be revoked'
+
+else:
+
+csv_data.append({
+
+"User': user,
+
+"Role': assigned_role,
+
+"Last Used': last_used.strftime('%Y-%m-%d %H:%M:%S'),
+
+'Status': 'Active'
+
+})
+
+#Write to CSV
+
+write_to_csv(csv_data)
+
+fname"main":
+
+main()
