@@ -669,3 +669,10 @@ Copy code
 python aws_role_usage_report.py
 The script will generate a CSV file named user_role_report.csv in the current directory.
 
+Sample Output (CSV File):
+UserName	RoleName	LastUsed	UsageFrequency
+john.doe	arn:aws:iam::123456789012
+/AdminRole	2023-06-10	10
+jane.smith	arn:aws:iam::123456789012
+/ReadOnlyRole	Never	0
+
