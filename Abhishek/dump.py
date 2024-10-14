@@ -575,3 +575,97 @@ Date Range: The report covers data from the last 90 days (3 months), providing a
 Role Management: The report helps AWS administrators easily manage IAM roles by highlighting active and inactive roles, optimizing access control, and ensuring unused permissions are not left in the environment.
 Security Enhancement: Regular review of role assignments and usage helps secure the AWS environment by reducing the risk of over-provisioned access.
 #-----------------------------------------------------------------------
+AWS Role-Wise Usage Report - Python Script Documentation
+Introduction:
+This Python script is designed to generate a detailed report of IAM roles assigned to users in an AWS account and their usage patterns over the past 90 days. It utilizes AWS Boto3 SDK to interact with IAM and CloudTrail services. The output is a CSV file listing each user, their assigned roles, the last time the role was used, and how frequently the role has been utilized in the last 3 months. The report is helpful for auditing, identifying inactive roles, and improving security by revoking unnecessary roles.
+
+Requirements:
+AWS credentials with permissions to access IAM and CloudTrail services.
+Python environment with boto3 library installed.
+You can install boto3 using the following command:
+
+bash
+Copy code
+pip install boto3
+Functions:
+1. list_users()
+Purpose: Retrieve a list of all IAM users in the AWS account.
+Description: Uses the IAM list_users API to paginate through all users in the account and return them in a list.
+Returns:
+A list of dictionaries, where each dictionary contains details of an IAM user (e.g., UserName, UserId, Arn, etc.).
+Usage:
+python
+Copy code
+users = list_users()
+Exception Handling: Captures any errors in retrieving users and prints an error message.
+2. get_user_roles(user_name)
+Purpose: Get all roles assigned to a specific IAM user through attached policies.
+Description: Retrieves attached policies for the user and parses the policy document to check if the user has permissions to assume any roles (through the AssumeRole action).
+Parameters:
+user_name: The name of the IAM user whose roles are to be checked.
+Returns:
+A list of roles assigned to the user (i.e., role ARNs).
+Usage:
+python
+Copy code
+roles = get_user_roles(user_name)
+Exception Handling: Handles any issues retrieving roles for a user and outputs an error message.
+3. get_role_usage(role_name)
+Purpose: Determine when a specific IAM role was last used and how often it was used in the past 90 days.
+Description: Uses CloudTrail's lookup_events API to query for AssumeRole events associated with a particular role over the last 3 months.
+Parameters:
+role_name: The ARN of the IAM role whose usage is being checked.
+Returns:
+last_used: The most recent time the role was used (or None if never used in the time period).
+frequency: The number of times the role has been assumed in the past 90 days
+Usage:
+python
+Copy code
+last_used, frequency = get_role_usage(role_name)
+Exception Handling: Captures any errors during the CloudTrail query and prints an error message.
+4. generate_user_role_report()
+Purpose: Generate a detailed report containing all users, their roles, and role usage information.
+Description: Iterates through all IAM users, retrieves their assigned roles, checks each role's usage via CloudTrail, and compiles the data into a list of dictionaries.
+Returns:
+A list of dictionaries where each dictionary contains:
+UserName: IAM user name.
+RoleName: IAM role ARN.
+LastUsed: Date when the role was last used or 'Never' if unused.
+UsageFrequency: The number of times the role was used in the last 90 days.
+Usage:
+python
+Copy code
+report = generate_user_role_report()
+5. save_report_to_csv(report, filename="user_role_report.csv")
+Purpose: Save the generated report to a CSV file.
+Description: Writes the user-role report to a CSV file with appropriate headers. Each row contains the user, role, last usage date, and usage frequency.
+Parameters:
+report: The list of dictionaries returned by generate_user_role_report().
+filename (optional): The name of the CSV file to save the report. Defaults to user_role_report.csv.
+Returns:
+Saves the CSV file to the local file system and prints a confirmation message.
+Usage:
+python
+Copy code
+save_report_to_csv(report)
+CSV Report Details:
+The generated CSV report provides the following columns:
+
+UserName: The name of the IAM user.
+RoleName: The ARN of the IAM role assigned to the user.
+LastUsed: The most recent date the role was used by the user. Displays 'Never' if the role wasn't used in the last 90 days.
+UsageFrequency: The number of times the user has assumed or used the role within the past 90 days.
+Sample Output (CSV File):
+UserName	RoleName	LastUsed	UsageFrequency
+john.doe	arn:aws:iam::123456789012
+/AdminRole	2023-06-10	10
+jane.smith	arn:aws:iam::123456789012
+/ReadOnlyRole	Never	0
+Example Usage:
+Set up AWS credentials in your environment (e.g., by using aws configure or providing a credentials file).
+Run the Python script to generate the report:
+bash
+Copy code
+python aws_role_usage_report.py
+The script will generate a CSV file named user_role_report.csv in the current directory.
+
