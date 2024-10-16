@@ -1157,3 +1157,8 @@ Future Improvements
 Service Account and Group Support: Currently, the script only checks for users (i.e., user accounts with the format user:email). It could be extended to include service accounts and groups.
 Role Usage for Permissions: In addition to checking role assignments, a future version could analyze specific permission usage for a more granular report.
 Filtering and Sorting: Allow filtering results by specific roles or users and sorting based on last usage.
+
+
+
+
+https://cloud.google.com/kubernetes-engine/enterprise/policy-controller/docs/how-to/using-nist-sp-800-53-r5
