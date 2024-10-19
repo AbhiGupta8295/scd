@@ -1243,3 +1243,66 @@ export function deactivate() {
 }
 
 
+
+{
+  "name": "python-runner",
+  "displayName": "Python Runner",
+  "description": "VS Code extension to run Python scripts",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "activationEvents": [
+    "onCommand:extension.runPythonScript"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.runPythonScript",
+        "title": "Run Python Script"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "typescript": "^4.4.0",
+    "vscode-test": "^1.5.0"
+  }
+}
+
+
+import * as vscode from 'vscode';
+import { exec } from 'child_process';
+
+export function activate(context: vscode.ExtensionContext) {
+
+    let disposable = vscode.commands.registerCommand('extension.runPythonScript', () => {
+        // You can modify the script path or use an active file
+        const pythonFilePath = vscode.window.activeTextEditor?.document.fileName;
+
+        if (pythonFilePath) {
+            exec(`python ${pythonFilePath}`, (err, stdout, stderr) => {
+                if (err) {
+                    vscode.window.showErrorMessage(`Error: ${stderr}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Output: ${stdout}`);
+            });
+        } else {
+            vscode.window.showErrorMessage('No Python file is open!');
+        }
+    });
+
+    context.subscriptions.push(disposable);
+}
+
+export function deactivate() {}
+
+
