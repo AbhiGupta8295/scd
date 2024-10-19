@@ -1163,3 +1163,83 @@ Filtering and Sorting: Allow filtering results by specific roles or users and so
 
 https://cloud.google.com/kubernetes-engine/enterprise/policy-controller/docs/how-to/using-nist-sp-800-53-r5
 ngrok config add-authtoken 2NEasov1vwL2ZQ8dXLGD9q2Z9Zc_46BavCuQJeX4eFfZPB4p1
+
+
+{
+  "contributes": {
+    "commands": [
+      {
+        "command": "streamlitExtension.runApp",
+        "title": "Run Streamlit App"
+      },
+      {
+        "command": "streamlitExtension.stopApp",
+        "title": "Stop Streamlit App"
+      }
+    ]
+  }
+}
+
+
+import * as vscode from 'vscode';
+import { spawn, ChildProcess } from 'child_process';
+
+let streamlitProcess: ChildProcess | undefined;
+
+export function activate(context: vscode.ExtensionContext) {
+  
+  // Command to run Streamlit app
+  let runApp = vscode.commands.registerCommand('streamlitExtension.runApp', () => {
+    if (streamlitProcess) {
+      vscode.window.showInformationMessage('Streamlit is already running!');
+      return;
+    }
+    
+    const terminal = vscode.window.createTerminal('Streamlit Terminal');
+    terminal.show(true);
+    terminal.sendText('streamlit run app.py'); // Customize this for your application
+
+    streamlitProcess = spawn('streamlit', ['run', 'app.py'], {
+      cwd: vscode.workspace.rootPath,  // Ensure the app runs from the current workspace directory
+      shell: true
+    });
+
+    streamlitProcess.stdout.on('data', (data) => {
+      vscode.window.showInformationMessage(`Streamlit: ${data}`);
+    });
+
+    streamlitProcess.stderr.on('data', (data) => {
+      vscode.window.showErrorMessage(`Streamlit Error: ${data}`);
+    });
+
+    streamlitProcess.on('close', (code) => {
+      vscode.window.showInformationMessage(`Streamlit process exited with code ${code}`);
+      streamlitProcess = undefined;
+    });
+
+    vscode.window.showInformationMessage('Streamlit app started!');
+  });
+
+  // Command to stop Streamlit app
+  let stopApp = vscode.commands.registerCommand('streamlitExtension.stopApp', () => {
+    if (streamlitProcess) {
+      streamlitProcess.kill();
+      vscode.window.showInformationMessage('Streamlit app stopped.');
+      streamlitProcess = undefined;
+    } else {
+      vscode.window.showInformationMessage('No Streamlit app is running.');
+    }
+  });
+
+  // Add to the context
+  context.subscriptions.push(runApp);
+  context.subscriptions.push(stopApp);
+}
+
+export function deactivate() {
+  if (streamlitProcess) {
+    streamlitProcess.kill();
+  }
+}
+
+
