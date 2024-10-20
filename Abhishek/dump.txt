@@ -1306,3 +1306,110 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 
 
+
+
+import * as vscode from 'vscode';
+import { spawn, ChildProcess } from 'child_process';
+
+let streamlitProcess: ChildProcess | undefined;
+
+export function activate(context: vscode.ExtensionContext) {
+  // Command to run the Streamlit app and open the localhost page in a webview
+  let runApp = vscode.commands.registerCommand('streamlitExtension.runApp', async () => {
+    if (streamlitProcess) {
+      vscode.window.showInformationMessage('Streamlit is already running!');
+      return;
+    }
+
+    // Prompt user for the custom file path to run Streamlit
+    const customFilePath = await vscode.window.showInputBox({
+      prompt: 'Enter the path to your Streamlit Python file (e.g., Home.py)',
+      placeHolder: 'Home.py',
+      value: 'Home.py',  // Default to Home.py
+    });
+
+    if (!customFilePath) {
+      vscode.window.showErrorMessage('No file path provided, cannot run Streamlit app.');
+      return;
+    }
+
+    // Run Streamlit app
+    streamlitProcess = spawn('python', ['-m', 'streamlit', 'run', customFilePath], {
+      cwd: vscode.workspace.rootPath, // Run from the current workspace directory
+      shell: true
+    });
+
+    streamlitProcess.stdout.on('data', (data) => {
+      vscode.window.showInformationMessage(`Streamlit: ${data}`);
+    });
+
+    streamlitProcess.stderr.on('data', (data) => {
+      vscode.window.showErrorMessage(`Streamlit Error: ${data}`);
+    });
+
+    streamlitProcess.on('close', (code) => {
+      vscode.window.showInformationMessage(`Streamlit process exited with code ${code}`);
+      streamlitProcess = undefined;
+    });
+
+    // Delay for a short time to allow the Streamlit server to start
+    setTimeout(() => {
+      // Show the Streamlit app in a webview
+      const panel = vscode.window.createWebviewPanel(
+        'streamlitApp',                         // Identifies the type of the webview panel
+        'Streamlit Application',                // Title of the tab
+        vscode.ViewColumn.One,                  // Editor column to show the new webview panel in
+        {                                       // Webview options
+          enableScripts: true                   // Enable JavaScript
+        }
+      );
+
+      // Load the Streamlit app's localhost URL inside the webview
+      const streamlitUrl = 'http://localhost:8501';  // Streamlit default URL
+      panel.webview.html = getWebviewContent(streamlitUrl);
+    }, 3000);  // Wait for 3 seconds for the Streamlit server to be up
+  });
+
+  // Command to stop the Streamlit app
+  let stopApp = vscode.commands.registerCommand('streamlitExtension.stopApp', () => {
+    if (streamlitProcess) {
+      streamlitProcess.kill();
+      vscode.window.showInformationMessage('Streamlit app stopped.');
+      streamlitProcess = undefined;
+    } else {
+      vscode.window.showInformationMessage('No Streamlit app is running.');
+    }
+  });
+
+  // Add the commands to the extension context
+  context.subscriptions.push(runApp);
+  context.subscriptions.push(stopApp);
+}
+
+// Clean up when the extension is deactivated
+export function deactivate() {
+  if (streamlitProcess) {
+    streamlitProcess.kill();
+  }
+}
+
+// Function to return the HTML content for the webview
+function getWebviewContent(url: string): string {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Streamlit</title>
+      <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+      </style>
+    </head>
+    <body>
+      <iframe src="${url}"></iframe>
+    </body>
+    </html>
+  `;
+}
