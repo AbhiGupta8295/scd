@@ -1413,3 +1413,44 @@ function getWebviewContent(url: string): string {
     </html>
   `;
 }
+
+
+
+http {
+    server {
+        listen 80;
+        server_name example.test;
+        
+        location / {
+            proxy_pass http://localhost:8051;  # Assuming your app runs on port 8051
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name myapp.local;
+
+        location / {
+            proxy_pass http://localhost:8501;  # Another app running on port 8501
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name devsite.local;
+
+        location / {
+            root C:/path/to/your/project;  # Serve static files or another app
+            index index.html;
+        }
+    }
+}
+
