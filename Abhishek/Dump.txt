@@ -1,0 +1,106 @@
+import * as vscode from 'vscode';
+
+export function activate(context: vscode.ExtensionContext) {
+    // Register the sidebar view
+    const provider = new HelloWorldViewProvider(context.extensionUri);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(HelloWorldViewProvider.viewType, provider)
+    );
+
+    // Register the command to open the sidebar view
+    let disposable = vscode.commands.registerCommand('extension.showHelloWorld', () => {
+        vscode.window.showInformationMessage('Hello from the Sidebar!');
+    });
+
+    context.subscriptions.push(disposable);
+}
+
+class HelloWorldViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'helloWorld.view';
+
+    constructor(private readonly extensionUri: vscode.Uri) {}
+
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken
+    ) {
+        webviewView.webview.options = {
+            enableScripts: true,
+        };
+
+        // Set the HTML content for the webview
+        webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
+    }
+
+    private getHtmlForWebview(webview: vscode.Webview): string {
+        // Simple HTML content with a button to make a POST request
+        return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Hello World Sidebar</title>
+            </head>
+            <body>
+                <h1>Hello from Sidebar</h1>
+                <button id="sendDataButton">Send Data to Python API</button>
+                <p id="responseMessage"></p>
+
+                <script>
+                    const vscode = acquireVsCodeApi();
+
+                    document.getElementById('sendDataButton').addEventListener('click', async () => {
+                        try {
+                            const response = await fetch('http://127.0.0.1:5000/api/data', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ message: 'Hello from VS Code Sidebar!' }),
+                            });
+                            const result = await response.json();
+                            document.getElementById('responseMessage').textContent = 'Response: ' + result.message;
+                        } catch (error) {
+                            document.getElementById('responseMessage').textContent = 'Error: ' + error.message;
+                        }
+                    });
+                </script>
+            </body>
+            </html>`;
+    }
+}
+
+export function deactivate() {}
+
+
+
+
+"contributes": {
+    "viewsContainers": {
+        "activitybar": [
+            {
+                "id": "helloWorld-sidebar",
+                "title": "Hello World",
+                "icon": "resources/icon.png"  // optional, add your icon here
+            }
+        ]
+    },
+    "views": {
+        "helloWorld-sidebar": [
+            {
+                "type": "webview",
+                "id": "helloWorld.view",
+                "name": "Hello Sidebar"
+            }
+        ]
+    },
+    "commands": [
+        {
+            "command": "extension.showHelloWorld",
+            "title": "Show Hello World"
+        }
+    ]
+},
+"activationEvents": [
+    "onView:helloWorld.view"
+]
