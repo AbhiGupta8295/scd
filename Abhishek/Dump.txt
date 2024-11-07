@@ -239,3 +239,133 @@ export function deactivate() {}
 ]
 
 
+
+
+
+"contributes": {
+    "viewsContainers": {
+        "activitybar": [
+            {
+                "id": "scdGenerator-sidebar",
+                "title": "SCD Generator",
+                "icon": "resources/icon.png"  // ensure this file exists or remove it if not needed
+            }
+        ]
+    },
+    "views": {
+        "scdGenerator-sidebar": [
+            {
+                "type": "webview",
+                "id": "scdGenerator.view",
+                "name": "Generate SCD"
+            }
+        ]
+    },
+    "commands": [
+        {
+            "command": "scdGenerator.showHelloWorld",
+            "title": "Show Hello World"
+        }
+    ]
+},
+"activationEvents": [
+    "onView:scdGenerator.view"
+]
+
+
+import * as vscode from 'vscode';
+
+export function activate(context: vscode.ExtensionContext) {
+    const provider = new SCDViewProvider(context.extensionUri);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(SCDViewProvider.viewType, provider)
+    );
+}
+
+class SCDViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = 'scdGenerator.view';
+
+    constructor(private readonly extensionUri: vscode.Uri) {}
+
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken
+    ) {
+        webviewView.webview.options = { enableScripts: true };
+        webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
+
+        // Listen for messages from the webview
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+            if (message.command === 'generateSCD') {
+                const { userPrompt, service, additionalControls } = message.data;
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/generate-scd', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_prompt: userPrompt,
+                            service: service,
+                            additional_controls: additionalControls
+                        })
+                    });
+                    const result = await response.json();
+                    webviewView.webview.postMessage({ command: 'showResult', data: result.scd });
+                } catch (error) {
+                    webviewView.webview.postMessage({ command: 'showError', data: error.message });
+                }
+            }
+        });
+    }
+
+    private getHtmlForWebview(webview: vscode.Webview): string {
+        return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>SCD Generator</title>
+            </head>
+            <body>
+                <h2>Generate SCD</h2>
+                <form id="scdForm">
+                    <label>User Prompt:</label>
+                    <input type="text" id="userPrompt" required><br>
+                    <label>Service:</label>
+                    <input type="text" id="service" required><br>
+                    <label>Additional Controls (comma-separated):</label>
+                    <input type="text" id="additionalControls"><br>
+                    <button type="button" onclick="generateSCD()">Generate</button>
+                </form>
+                <h3 id="result"></h3>
+                <script>
+                    const vscode = acquireVsCodeApi();
+
+                    function generateSCD() {
+                        const userPrompt = document.getElementById('userPrompt').value;
+                        const service = document.getElementById('service').value;
+                        const additionalControls = document.getElementById('additionalControls').value.split(',');
+
+                        vscode.postMessage({
+                            command: 'generateSCD',
+                            data: { userPrompt, service, additionalControls }
+                        });
+                    }
+
+                    window.addEventListener('message', (event) => {
+                        const message = event.data;
+                        if (message.command === 'showResult') {
+                            document.getElementById('result').textContent = 'Generated SCD: ' + message.data;
+                        } else if (message.command === 'showError') {
+                            document.getElementById('result').textContent = 'Error: ' + message.data;
+                        }
+                    });
+                </script>
+            </body>
+            </html>`;
+    }
+}
+
+export function deactivate() {}
+
