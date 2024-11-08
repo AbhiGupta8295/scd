@@ -1,371 +1,100 @@
-import * as vscode from 'vscode';
-
-export function activate(context: vscode.ExtensionContext) {
-    // Register the sidebar view
-    const provider = new HelloWorldViewProvider(context.extensionUri);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(HelloWorldViewProvider.viewType, provider)
-    );
-
-    // Register the command to open the sidebar view
-    let disposable = vscode.commands.registerCommand('extension.showHelloWorld', () => {
-        vscode.window.showInformationMessage('Hello from the Sidebar!');
-    });
-
-    context.subscriptions.push(disposable);
-}
-
-class HelloWorldViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'helloWorld.view';
-
-    constructor(private readonly extensionUri: vscode.Uri) {}
-
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
-    ) {
-        webviewView.webview.options = {
-            enableScripts: true,
-        };
-
-        // Set the HTML content for the webview
-        webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
-    }
-
-    private getHtmlForWebview(webview: vscode.Webview): string {
-        // Simple HTML content with a button to make a POST request
-        return `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Hello World Sidebar</title>
-            </head>
-            <body>
-                <h1>Hello from Sidebar</h1>
-                <button id="sendDataButton">Send Data to Python API</button>
-                <p id="responseMessage"></p>
-
-                <script>
-                    const vscode = acquireVsCodeApi();
-
-                    document.getElementById('sendDataButton').addEventListener('click', async () => {
-                        try {
-                            const response = await fetch('http://127.0.0.1:5000/api/data', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ message: 'Hello from VS Code Sidebar!' }),
-                            });
-                            const result = await response.json();
-                            document.getElementById('responseMessage').textContent = 'Response: ' + result.message;
-                        } catch (error) {
-                            document.getElementById('responseMessage').textContent = 'Error: ' + error.message;
-                        }
-                    });
-                </script>
-            </body>
-            </html>`;
-    }
-}
-
-export function deactivate() {}
-
-
-
-
-"contributes": {
-    "viewsContainers": {
-        "activitybar": [
-            {
-                "id": "helloWorld-sidebar",
-                "title": "Hello World",
-                "icon": "resources/icon.png"  // optional, add your icon here
-            }
-        ]
-    },
-    "views": {
-        "helloWorld-sidebar": [
-            {
-                "type": "webview",
-                "id": "helloWorld.view",
-                "name": "Hello Sidebar"
-            }
-        ]
-    },
-    "commands": [
-        {
-            "command": "extension.showHelloWorld",
-            "title": "Show Hello World"
-        }
-    ]
-},
-"activationEvents": [
-    "onView:helloWorld.view"
-]
-
-
-
-
-
-
-
-
-
-import * as vscode from 'vscode';
-
-export function activate(context: vscode.ExtensionContext) {
-    const provider = new SCDViewProvider(context.extensionUri);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(SCDViewProvider.viewType, provider)
-    );
-}
-
-class SCDViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'scdGenerator.view';
-
-    constructor(private readonly extensionUri: vscode.Uri) {}
-
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
-    ) {
-        webviewView.webview.options = {
-            enableScripts: true,
-        };
-
-        webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
-        
-        // Handle messages from the webview
-        webviewView.webview.onDidReceiveMessage(async (message) => {
-            if (message.command === 'generateSCD') {
-                const { userPrompt, service, additionalControls } = message.data;
-                try {
-                    const response = await fetch('http://127.0.0.1:8000/generate-scd', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_prompt: userPrompt,
-                            service: service,
-                            additional_controls: additionalControls
-                        })
-                    });
-                    const result = await response.json();
-                    webviewView.webview.postMessage({ command: 'showResult', data: result.scd });
-                } catch (error) {
-                    webviewView.webview.postMessage({ command: 'showError', data: error.message });
+getWebviewContent() {
+    return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SCD Policy Generator</title>
+            <style>
+                /* Styling (same as you provided) */
+                body { font-family: Arial, sans-serif; color: #ffffff; background-color: #191818; padding: 20px; }
+                h1 { color: #e3f9ff; font-size: 24px; margin-bottom: 10px; }
+                h2 { color: #f5d4ff; font-size: 18px; margin-top: 20px; }
+                label { font-size: 14px; color: #c9c9c9; }
+                input[type="file"], input[type="textarea"], textarea, button {
+                    font-size: 14px; padding: 5px; margin: 5px 0; border-radius: 4px; border: 1px solid #3c3c3c; color: #ffffff; background-color: #ef0e0e;
                 }
-            }
-        });
-    }
+                textarea { width: 95%; resize: none; background-color: #2d2d2d; }
+                input[type="checkbox"] { margin: 8px; }
+                button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 5px; transition: background-color 0.25 ease; }
+                #scdButton:hover { background-color: #4caf50; color: white; }
+                #policyButton:hover { background-color: #0b7dda; color: white; }
+                .section { margin-bottom: 15px; }
+            </style>
+        </head>
+        <body>
+            <h1>SCD Policy Generator</h1>
+            <div class="section">
+                <h2>Upload a File</h2>
+                <input type="file" id="fileInput" />
+            </div>
+            <div class="section">
+                <h2>Enter a Prompt</h2>
+                <label for="textPrompt">Enter Text Prompt:</label>
+                <textarea rows="5" id="textPrompt" placeholder="Type your prompt here..."></textarea>
+            </div>
+            <div class="section">
+                <h2>Output File Format</h2>
+                <label>Choose file format:</label><br/>
+                <input type="checkbox" id="option1" onclick="selectOnlyThis('option1')" /> .csv <br/>
+                <input type="checkbox" id="option2" onclick="selectOnlyThis('option2')" /> .md <br/>
+                <input type="checkbox" id="option3" onclick="selectOnlyThis('option3')" /> .xlsx <br/>
+            </div>
+            <div class="section">
+                <h2>Generate Files</h2>
+                <button id="scdButton">Generate SCD</button>
+                <button id="policyButton">Generate IAM Policy</button>
+            </div>
+            <div id="output"></div>
+            <script>
+                const vscode = acquireVsCodeApi();
 
-    private getHtmlForWebview(webview: vscode.Webview): string {
-        return `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>SCD Generator</title>
-            </head>
-            <body>
-                <h2>Generate SCD</h2>
-                <form id="scdForm">
-                    <label>User Prompt:</label>
-                    <input type="text" id="userPrompt" required><br>
-                    <label>Service:</label>
-                    <input type="text" id="service" required><br>
-                    <label>Additional Controls (comma-separated):</label>
-                    <input type="text" id="additionalControls"><br>
-                    <button type="button" onclick="generateSCD()">Generate</button>
-                </form>
-                <h3 id="result"></h3>
-                <script>
-                    const vscode = acquireVsCodeApi();
-
-                    function generateSCD() {
-                        const userPrompt = document.getElementById('userPrompt').value;
-                        const service = document.getElementById('service').value;
-                        const additionalControls = document.getElementById('additionalControls').value.split(',');
-
-                        vscode.postMessage({
-                            command: 'generateSCD',
-                            data: { userPrompt, service, additionalControls }
-                        });
-                    }
-
-                    window.addEventListener('message', (event) => {
-                        const message = event.data;
-                        if (message.command === 'showResult') {
-                            document.getElementById('result').textContent = 'Generated SCD: ' + message.data;
-                        } else if (message.command === 'showError') {
-                            document.getElementById('result').textContent = 'Error: ' + message.data;
-                        }
-                    });
-                </script>
-            </body>
-            </html>`;
-    }
-}
-
-export function deactivate() {}
-
-
-
-"contributes": {
-    "viewsContainers": {
-        "activitybar": [
-            {
-                "id": "scdGenerator-sidebar",
-                "title": "SCD Generator",
-                "icon": "resources/icon.png"
-            }
-        ]
-    },
-    "views": {
-        "scdGenerator-sidebar": [
-            {
-                "type": "webview",
-                "id": "scdGenerator.view",
-                "name": "Generate SCD"
-            }
-        ]
-    }
-},
-"activationEvents": [
-    "onView:scdGenerator.view"
-]
-
-
-
-
-
-"contributes": {
-    "viewsContainers": {
-        "activitybar": [
-            {
-                "id": "scdGenerator-sidebar",
-                "title": "SCD Generator",
-                "icon": "resources/icon.png"  // ensure this file exists or remove it if not needed
-            }
-        ]
-    },
-    "views": {
-        "scdGenerator-sidebar": [
-            {
-                "type": "webview",
-                "id": "scdGenerator.view",
-                "name": "Generate SCD"
-            }
-        ]
-    },
-    "commands": [
-        {
-            "command": "scdGenerator.showHelloWorld",
-            "title": "Show Hello World"
-        }
-    ]
-},
-"activationEvents": [
-    "onView:scdGenerator.view"
-]
-
-
-import * as vscode from 'vscode';
-
-export function activate(context: vscode.ExtensionContext) {
-    const provider = new SCDViewProvider(context.extensionUri);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(SCDViewProvider.viewType, provider)
-    );
-}
-
-class SCDViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'scdGenerator.view';
-
-    constructor(private readonly extensionUri: vscode.Uri) {}
-
-    public resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
-    ) {
-        webviewView.webview.options = { enableScripts: true };
-        webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
-
-        // Listen for messages from the webview
-        webviewView.webview.onDidReceiveMessage(async (message) => {
-            if (message.command === 'generateSCD') {
-                const { userPrompt, service, additionalControls } = message.data;
-                try {
-                    const response = await fetch('http://127.0.0.1:8000/generate-scd', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_prompt: userPrompt,
-                            service: service,
-                            additional_controls: additionalControls
-                        })
-                    });
-                    const result = await response.json();
-                    webviewView.webview.postMessage({ command: 'showResult', data: result.scd });
-                } catch (error) {
-                    webviewView.webview.postMessage({ command: 'showError', data: error.message });
+                function selectOnlyThis(id) {
+                    document.getElementById("option1").checked = false;
+                    document.getElementById("option2").checked = false;
+                    document.getElementById("option3").checked = false;
+                    document.getElementById(id).checked = true;
                 }
-            }
-        });
-    }
 
-    private getHtmlForWebview(webview: vscode.Webview): string {
-        return `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>SCD Generator</title>
-            </head>
-            <body>
-                <h2>Generate SCD</h2>
-                <form id="scdForm">
-                    <label>User Prompt:</label>
-                    <input type="text" id="userPrompt" required><br>
-                    <label>Service:</label>
-                    <input type="text" id="service" required><br>
-                    <label>Additional Controls (comma-separated):</label>
-                    <input type="text" id="additionalControls"><br>
-                    <button type="button" onclick="generateSCD()">Generate</button>
-                </form>
-                <h3 id="result"></h3>
-                <script>
-                    const vscode = acquireVsCodeApi();
+                function getSelectedOptions() {
+                    return [
+                        document.getElementById('option1').checked,
+                        document.getElementById('option2').checked,
+                        document.getElementById('option3').checked
+                    ];
+                }
 
-                    function generateSCD() {
-                        const userPrompt = document.getElementById('userPrompt').value;
-                        const service = document.getElementById('service').value;
-                        const additionalControls = document.getElementById('additionalControls').value.split(',');
+                // Handle SCD Button Click
+                document.getElementById('scdButton').addEventListener('click', async () => {
+                    const prompt = document.getElementById('textPrompt').value;
+                    const options = getSelectedOptions();
 
-                        vscode.postMessage({
-                            command: 'generateSCD',
-                            data: { userPrompt, service, additionalControls }
+                    try {
+                        const response = await fetch('http://127.0.0.1:8000/generate-scd', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_prompt: prompt,
+                                service: 'example_service',
+                                additional_controls: options
+                            })
                         });
+                        const result = await response.json();
+                        document.getElementById('output').textContent = 'Generated SCD: ' + result.scd;
+                    } catch (error) {
+                        document.getElementById('output').textContent = 'Error: ' + error.message;
                     }
+                });
 
-                    window.addEventListener('message', (event) => {
-                        const message = event.data;
-                        if (message.command === 'showResult') {
-                            document.getElementById('result').textContent = 'Generated SCD: ' + message.data;
-                        } else if (message.command === 'showError') {
-                            document.getElementById('result').textContent = 'Error: ' + message.data;
-                        }
-                    });
-                </script>
-            </body>
-            </html>`;
-    }
+                // Handle Policy Button Click
+                document.getElementById('policyButton').addEventListener('click', () => {
+                    const prompt = document.getElementById('textPrompt').value;
+                    const options = getSelectedOptions();
+
+                    vscode.postMessage({ command: 'sendPolicyRequest', prompt, options });
+                });
+            </script>
+        </body>
+        </html>`;
 }
-
-export function deactivate() {}
-
