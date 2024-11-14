@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+</head>
+<body>
+    <h1>Upload a file</h1>
+    <form id="uploadForm">
+        <input type="file" id="fileInput" />
+        <p id="errorMessage" style="color: red;"></p>
+        <button type="submit">Upload</button>
+    </form>
+
+    <textarea id="responseOutput" readonly style="width: 100%; height: 200px;"></textarea>
+
+    <script>
+        // This function creates the request data combining JSON fields and the file
+        const requestData = (file) => {
+            // Create a FormData object for the file upload
+            const formData = new FormData();
+            formData.append('file', file);  // Append the file
+
+            // Create the additional controls object
+            const additionalControls = {
+                prompt: "Your user prompt here",
+                service: "Your service here",
+                additional_controls: [
+                    "Tagging",
+                    "Naming Convention",
+                    "Traffic Management"
+                ],
+                azure_controls: ["HTTP to HTTPS Redirection", "Threat Detection"]
+            };
+
+            // Append the JSON data as a blob since FormData doesn't support nested objects directly
+            formData.append('requestData', new Blob([JSON.stringify(additionalControls)], { type: 'application/json' }));
+
+            return formData;
+        };
+
+        document.getElementById('uploadForm').addEventListener('submit', async function (e) {
+            e.preventDefault();  // Prevent form from submitting
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0]; // Get the uploaded file
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Check if a file is selected
+            if (!file) {
+                errorMessage.textContent = "Please select a file to upload.";
+                return;
+            }
+
+            // Get the file extension
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            // Allow only CSV and Markdown (md) files
+            if (fileExtension !== 'csv' && fileExtension !== 'md') {
+                errorMessage.textContent = "Invalid file type. Please upload a CSV or Markdown (.md) file.";
+                return;
+            }
+
+            // Prepare the form data using the requestData function
+            const formData = requestData(file);
+
+            try {
+                toggleLoader(true); // Show loader (you can define this function to show a loading indicator)
+
+                // Send the request to FastAPI using fetch
+                const response = await fetch('http://127.0.0.1:8000/generate-scd', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                toggleLoader(false); // Hide loader
+
+                if (response.ok) {
+                    // Parse and display the response data
+                    const responseData = await response.json();
+                    document.getElementById("responseOutput").value =
+                        responseData.scd || "No SCD data found in response.";
+                    showResponseSection(); // You can implement this to show the output section
+                } else {
+                    document.getElementById("responseOutput").value = "Error: " + response.statusText;
+                }
+            } catch (error) {
+                toggleLoader(false); // Hide loader
+                document.getElementById("responseOutput").value = "Request failed: " + error.message;
+            }
+        });
+
+        function toggleLoader(show) {
+            // Implement the function to show or hide the loader (spinner)
+            console.log(show ? "Loader shown" : "Loader hidden");
+        }
+
+        function showResponseSection() {
+            // Implement this function to display the response output section if necessary
+            console.log("Showing response section");
+        }
+    </script>
+</body>
+</html>
