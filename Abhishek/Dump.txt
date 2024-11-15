@@ -82,3 +82,82 @@ class PolicyGenerator:
         print("Simulating model invocation with prompt:")
         print(prompt_template)
         return {"policy": "Generated IAM policy JSON based on provided controls and template."}
+
+
+
+----------------2nd gen---------------
+import os
+import json
+import re
+import random
+
+class PolicyGenerator:
+    def __init__(self, scd_templates=None):
+        self.scd_templates = scd_templates or []
+        self.scd_controls = self.load_scd_template()
+
+    def load_scd_template(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            template_path = os.path.join(current_dir, "templates", "aks-scd.json")
+            with open(template_path, "r") as f:
+                return json.load(f).get("policy_examples", [])
+        except Exception as e:
+            print(f"Error loading template: {e}")
+            return []
+
+    def generate_policy(self, user_prompt):
+        # Identify the resource name from the user prompt
+        resource_name_match = re.search(r"\b(Azure\s\w+|GCP\s\w+)\b", user_prompt, re.IGNORECASE)
+        resource_name = resource_name_match.group(0) if resource_name_match else "GeneralService"
+
+        # Extract a subset of controls from the loaded SCD template (assuming we take the first 20 if available)
+        selected_controls = self.scd_controls[:20] if len(self.scd_controls) >= 20 else self.scd_controls
+
+        # Ensure we have at least 20 controls by generating additional placeholder controls if needed
+        while len(selected_controls) < 20:
+            new_id = self.generate_control_id(resource_name)
+            selected_controls.append({"control_id": new_id, "description": ""})
+
+        # Select a template and format it for policy generation
+        template_str = self.format_template(random.choice(self.scd_templates), resource_name)
+
+        # Prepare control information for the prompt
+        control_ids_info = "\n".join([f"{ctrl['control_id']}" for ctrl in selected_controls])
+        control_descriptions = "\n".join([ctrl['description'] for ctrl in selected_controls])
+
+        # Define the full prompt template for policy generation
+        prompt_template = f"""
+            SYSTEM PROMPT:
+            You are a best practices security engineer tasked with implementing a security document. Your job is to generate a detailed IAM policy for {resource_name} that incorporates relevant security controls.
+
+            USER PROMPT TEMPLATE:
+            Generate a detailed IAM policy for {resource_name} incorporating security controls including:
+            Identity and Access Management, Network Security, Data Protection, API Security, Logging, and Monitoring.
+            Please ensure all aspects of security controls are applied in the policy.
+
+            Control IDs:
+            {control_ids_info}
+
+            Control Descriptions:
+            {control_descriptions}
+        """
+
+        # Simulate invoking a model to generate the response
+        response = self.invoke_model(prompt_template)
+        
+        return response
+
+    def format_template(self, template, resource_name):
+        # Replace any placeholders in the template with the resource name
+        return template.replace("{resource_name}", resource_name)
+
+    def generate_control_id(self, resource_name):
+        # Placeholder for ID generation logic; this could be based on specific business logic
+        return f"{resource_name}-CTRL-{random.randint(1000, 9999)}"
+
+    def invoke_model(self, prompt_template):
+        # This would normally invoke a language model to process the prompt
+        print("Simulating model invocation with prompt:")
+        print(prompt_template)
+        return {"policy": "Generated IAM policy JSON based on provided controls and template."}
