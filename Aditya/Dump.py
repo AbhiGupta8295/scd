@@ -8,12 +8,12 @@ class ModelTrainer:
     def train(self):
         print("Starting training process...")
 
-        # Dynamically set data directory path based on the current file's location
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        data_dir = os.path.join(project_root, 'app', 'dataSource')
+        # Dynamically set the correct data directory path
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        data_dir = os.path.join(project_root, 'dataSource')
         print(f"Data directory: {data_dir}")
 
-        # Check if data directory exists
+        # Verify if data directory exists
         if not os.path.exists(data_dir):
             raise FileNotFoundError(f"Data directory not found at {data_dir}")
 
@@ -40,11 +40,13 @@ class ModelTrainer:
             combined_data = pd.concat(data_frames, ignore_index=True)
             print("Combined data for training loaded.")
             
-            # Replace with actual embedding and model training logic
+            # Replace this with actual embedding and model training logic
             # Example: self.embeddings = your_embedding_process(combined_data)
             
-            self.save_trained_model()
-            print("Model training completed and saved.")
+            if self.save_trained_model():
+                print("Model training completed and saved.")
+            else:
+                print("Error: Failed to save trained model.")
         else:
             print("No data to train the model.")
 
@@ -59,4 +61,11 @@ class ModelTrainer:
     def save_trained_model(self):
         model_path = os.path.join(os.path.dirname(__file__), 'trained_model.pkl')
         print(f"Saving trained model to {model_path}...")
-        # Save model code here
+
+        try:
+            # Save model code here
+            # e.g., with open(model_path, 'wb') as file: pickle.dump(model, file)
+            return True
+        except Exception as e:
+            print(f"Error saving model: {e}")
+            return False
