@@ -1,60 +1,37 @@
-import os
-from io_handler import IOHandler  # Assuming IOHandler is the utility for loading CSV data
-from faiss import FAISS  # Assuming FAISS import is correct
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-class ModelTrainer:
-    def __init__(self, embeddings):
-        self.embeddings = embeddings
-        self.vector_store = None
+from src.model.model_trainer import ModelTrainer  # Import ModelTrainer directly
 
-    def train(self):
-        try:
-            print("Starting training process...")
+# Initialize the FastAPI app
+app = FastAPI()
 
-            # Step 1: Verify data directory path
-            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
-            data_dir = os.path.join(project_root, 'dataSource')
-            print(f"Data directory: {data_dir}")
+# Configure CORS middleware (if needed)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-            if not os.path.exists(data_dir):
-                raise FileNotFoundError(f"Data directory not found at {data_dir}")
+# Instantiate ModelTrainer and handle loading or training
+try:
+    # Replace 'embeddings' with the actual embeddings object required by ModelTrainer
+    model_trainer = ModelTrainer(embeddings)
+    model_trainer.load_trained_model()  # Attempt to load the model
+    print("Trained model loaded successfully.")
+except FileNotFoundError:
+    print("Trained model not found. Starting training process...")
+    model_trainer.train()  # Train and save the model if not found
+    print("Model training completed and saved.")
+except Exception as e:
+    print(f"Error during model loading or training: {e}")
 
-            # Step 2: Find CSV files in the data directory
-            csv_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.csv')]
-            print(f"Found CSV files: {csv_files}")
+# Include your FastAPI routers (if any)
+# from src.fastapi.scdGenerate import router as scd_router
+# app.include_router(scd_router)
 
-            if not csv_files:
-                raise FileNotFoundError("No CSV files found in data source directory.")
-
-            # Step 3: Load data from CSV files
-            combined_data = IOHandler.load_csv(csv_files)
-            if combined_data is None or combined_data.empty:
-                raise ValueError("Loaded data is empty after combining CSV files.")
-
-            print("Data loaded successfully for training.")
-
-            # Step 4: Prepare data for vector storage
-            texts = combined_data.apply(lambda row: ' '.join(row.values.astype(str)), axis=1).tolist()
-            metadatas = combined_data.to_dict('records')
-
-            # Ensure metadata is in the correct format
-            for metadata in metadatas:
-                for key, value in metadata.items():
-                    metadata[key] = str(value)
-
-            print("Data prepared for vector store creation.")
-
-            # Step 5: Create vector store
-            self.vector_store = FAISS.from_texts(texts, self.embeddings, metadatas=metadatas)
-            print("Vector store created in memory.")
-
-            # Step 6: Save the vector store
-            vector_store_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'vector_store')
-            os.makedirs(vector_store_path, exist_ok=True)
-            print(f"Vector store directory ensured at: {vector_store_path}")
-
-            self.vector_store.save_local(vector_store_path)
-            print("Vector store saved successfully at:", vector_store_path)
-
-        except Exception as e:
-            print(f"Error during training: {e}")
+# Run the application
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
