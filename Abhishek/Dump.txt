@@ -1,100 +1,84 @@
-getWebviewContent() {
-    return `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>SCD Policy Generator</title>
-            <style>
-                /* Styling (same as you provided) */
-                body { font-family: Arial, sans-serif; color: #ffffff; background-color: #191818; padding: 20px; }
-                h1 { color: #e3f9ff; font-size: 24px; margin-bottom: 10px; }
-                h2 { color: #f5d4ff; font-size: 18px; margin-top: 20px; }
-                label { font-size: 14px; color: #c9c9c9; }
-                input[type="file"], input[type="textarea"], textarea, button {
-                    font-size: 14px; padding: 5px; margin: 5px 0; border-radius: 4px; border: 1px solid #3c3c3c; color: #ffffff; background-color: #ef0e0e;
-                }
-                textarea { width: 95%; resize: none; background-color: #2d2d2d; }
-                input[type="checkbox"] { margin: 8px; }
-                button { padding: 10px 15px; cursor: pointer; border: none; border-radius: 5px; transition: background-color 0.25 ease; }
-                #scdButton:hover { background-color: #4caf50; color: white; }
-                #policyButton:hover { background-color: #0b7dda; color: white; }
-                .section { margin-bottom: 15px; }
-            </style>
-        </head>
-        <body>
-            <h1>SCD Policy Generator</h1>
-            <div class="section">
-                <h2>Upload a File</h2>
-                <input type="file" id="fileInput" />
-            </div>
-            <div class="section">
-                <h2>Enter a Prompt</h2>
-                <label for="textPrompt">Enter Text Prompt:</label>
-                <textarea rows="5" id="textPrompt" placeholder="Type your prompt here..."></textarea>
-            </div>
-            <div class="section">
-                <h2>Output File Format</h2>
-                <label>Choose file format:</label><br/>
-                <input type="checkbox" id="option1" onclick="selectOnlyThis('option1')" /> .csv <br/>
-                <input type="checkbox" id="option2" onclick="selectOnlyThis('option2')" /> .md <br/>
-                <input type="checkbox" id="option3" onclick="selectOnlyThis('option3')" /> .xlsx <br/>
-            </div>
-            <div class="section">
-                <h2>Generate Files</h2>
-                <button id="scdButton">Generate SCD</button>
-                <button id="policyButton">Generate IAM Policy</button>
-            </div>
-            <div id="output"></div>
-            <script>
-                const vscode = acquireVsCodeApi();
+import os
+import json
+import re
+import random
 
-                function selectOnlyThis(id) {
-                    document.getElementById("option1").checked = false;
-                    document.getElementById("option2").checked = false;
-                    document.getElementById("option3").checked = false;
-                    document.getElementById(id).checked = true;
-                }
+class PolicyGenerator:
+    def __init__(self, vector_store=None, scd_templates=None):
+        self.vector_store = vector_store
+        self.scd_templates = scd_templates or []
 
-                function getSelectedOptions() {
-                    return [
-                        document.getElementById('option1').checked,
-                        document.getElementById('option2').checked,
-                        document.getElementById('option3').checked
-                    ];
-                }
+    def load_scd_template(self):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            template_path = os.path.join(current_dir, "templates", "aks-scd.json")
+            with open(template_path, "r") as f:
+                return json.load(f).get("policy_examples", [])
+        except Exception as e:
+            print(f"Error loading template: {e}")
+            return []
 
-                // Handle SCD Button Click
-                document.getElementById('scdButton').addEventListener('click', async () => {
-                    const prompt = document.getElementById('textPrompt').value;
-                    const options = getSelectedOptions();
+    def generate_policy(self, user_prompt):
+        if self.vector_store is None:
+            raise ValueError("Vector store is not initialized. Please check vector store loading in ModelTrainer.")
+        
+        # Identify the resource name from the user prompt
+        resource_name_match = re.search(r"\b(Azure\s\w+|GCP\s\w+)\b", user_prompt, re.IGNORECASE)
+        resource_name = resource_name_match.group(0) if resource_name_match else "GeneralService"
 
-                    try {
-                        const response = await fetch('http://127.0.0.1:8000/generate-scd', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                user_prompt: prompt,
-                                service: 'example_service',
-                                additional_controls: options
-                            })
-                        });
-                        const result = await response.json();
-                        document.getElementById('output').textContent = 'Generated SCD: ' + result.scd;
-                    } catch (error) {
-                        document.getElementById('output').textContent = 'Error: ' + error.message;
-                    }
-                });
+        # Search for relevant security controls based on the prompt
+        relevant_controls = self.vector_store.similarity_search(user_prompt, k=25)
+        vector_store_controls = []
 
-                // Handle Policy Button Click
-                document.getElementById('policyButton').addEventListener('click', () => {
-                    const prompt = document.getElementById('textPrompt').value;
-                    const options = getSelectedOptions();
+        # Extract control IDs and descriptions from the vector store results
+        for doc in relevant_controls:
+            control_id = doc.metadata.get("control_id") if hasattr(doc, "metadata") else None
+            vector_store_controls.append({"control_id": control_id, "description": doc.page_content})
 
-                    vscode.postMessage({ command: 'sendPolicyRequest', prompt, options });
-                });
-            </script>
-        </body>
-        </html>`;
-}
+        # Generate additional control IDs if fewer than 20 results are found
+        while len(vector_store_controls) < 20:
+            new_id = self.generate_control_id(resource_name)
+            vector_store_controls.append({"control_id": new_id, "description": ""})
+
+        # Select a template and format it for the policy generation
+        template_str = self.format_template(random.choice(self.scd_templates), resource_name)
+
+        # Prepare control information for the prompt
+        control_descriptions = [doc.page_content for doc in relevant_controls]
+        control_ids_info = "\n".join([f"{ctrl['control_id']}" for ctrl in vector_store_controls])
+
+        # Set up the prompt with control data for the model
+        prompt_template = f"""
+            SYSTEM PROMPT:
+            You are a best practices security engineer tasked with implementing a security document. Your job is to generate a detailed IAM policy for {resource_name} that incorporates relevant security controls.
+
+            USER PROMPT TEMPLATE:
+            Generate a detailed IAM policy for {resource_name} incorporating security controls including:
+            Identity and Access Management, Network Security, Data Protection, API Security, Logging, and Monitoring.
+            Please ensure all aspects of security controls are applied in the policy.
+
+            Control IDs:
+            {control_ids_info}
+
+            Control Descriptions:
+            {"\n".join(control_descriptions)}
+        """
+
+        # Simulate invoking a model to generate the response
+        response = self.invoke_model(prompt_template)
+        
+        return response
+
+    def format_template(self, template, resource_name):
+        # Replace any placeholders in the template with the resource name
+        return template.replace("{resource_name}", resource_name)
+
+    def generate_control_id(self, resource_name):
+        # Placeholder for ID generation logic; this could be based on specific business logic
+        return f"{resource_name}-CTRL-{random.randint(1000, 9999)}"
+
+    def invoke_model(self, prompt_template):
+        # This would normally invoke a language model to process the prompt
+        print("Simulating model invocation with prompt:")
+        print(prompt_template)
+        return {"policy": "Generated IAM policy JSON based on provided controls and template."}
