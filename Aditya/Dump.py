@@ -2,8 +2,9 @@ import os
 import pandas as pd
 
 class ModelTrainer:
-    def __init__(self, embeddings):
+    def __init__(self, embeddings, vector_store_path='vector_store.pkl'):
         self.embeddings = embeddings
+        self.vector_store_path = os.path.join(os.path.dirname(__file__), vector_store_path)
 
     def train(self):
         print("Starting training process...")
@@ -40,7 +41,7 @@ class ModelTrainer:
             combined_data = pd.concat(data_frames, ignore_index=True)
             print("Combined data for training loaded.")
             
-            # Replace this with actual embedding and model training logic
+            # Placeholder for embedding and model training logic
             # Example: self.embeddings = your_embedding_process(combined_data)
             
             if self.save_trained_model():
@@ -51,20 +52,19 @@ class ModelTrainer:
             print("No data to train the model.")
 
     def load_trained_model(self):
-        model_path = os.path.join(os.path.dirname(__file__), 'trained_model.pkl')
-        if os.path.exists(model_path):
-            print("Loading the trained model...")
+        if os.path.exists(self.vector_store_path):
+            print("Loading the trained model from vector store...")
             # Load model code here
+            # Example: with open(self.vector_store_path, 'rb') as file: self.model = pickle.load(file)
         else:
-            raise FileNotFoundError("Trained model not found.")
+            raise FileNotFoundError("Trained model not found. Please run the training process first.")
 
     def save_trained_model(self):
-        model_path = os.path.join(os.path.dirname(__file__), 'trained_model.pkl')
-        print(f"Saving trained model to {model_path}...")
+        print(f"Saving trained model to {self.vector_store_path}...")
 
         try:
             # Save model code here
-            # e.g., with open(model_path, 'wb') as file: pickle.dump(model, file)
+            # e.g., with open(self.vector_store_path, 'wb') as file: pickle.dump(self.embeddings, file)
             return True
         except Exception as e:
             print(f"Error saving model: {e}")
