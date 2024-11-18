@@ -161,3 +161,83 @@ class PolicyGenerator:
         print("Simulating model invocation with prompt:")
         print(prompt_template)
         return {"policy": "Generated IAM policy JSON based on provided controls and template."}
+
+
+----------------------------------------------------------------------------
+
+
+{
+  "Name": "AKSReadOnlyAccess",
+  "IsCustom": true,
+  "Description": "Provides read-only access to all aspects of Azure Kubernetes Services (AKS).",
+  "Actions": [
+    // Access to view AKS clusters and related metadata
+    "Microsoft.ContainerService/managedClusters/read",
+    "Microsoft.ContainerService/managedClusters/listClusterAdminCredential/action",
+    "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action",
+    
+    // View access to network profiles and configurations
+    "Microsoft.Network/virtualNetworks/read",
+    "Microsoft.Network/networkInterfaces/read",
+    "Microsoft.Network/publicIPAddresses/read",
+    "Microsoft.Network/networkSecurityGroups/read",
+    "Microsoft.Network/loadBalancers/read",
+    "Microsoft.Network/applicationGateways/read",
+
+    // Access to view AKS node pools
+    "Microsoft.ContainerService/managedClusters/agentPools/read",
+
+    // Access to view log analytics and monitoring configurations
+    "Microsoft.Insights/metrics/read",
+    "Microsoft.Insights/metricDefinitions/read",
+    "Microsoft.Insights/logProfiles/read",
+    "Microsoft.Insights/diagnosticSettings/read",
+    "Microsoft.Insights/actionGroups/read",
+
+    // Access to view resource groups and resources in them
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Resources/deployments/read",
+    "Microsoft.Resources/subscriptions/read",
+    "Microsoft.Resources/subscriptions/providers/read",
+    
+    // Read access to AKS Kubernetes role bindings and RBAC configurations
+    "Microsoft.Authorization/roleAssignments/read",
+    "Microsoft.Authorization/roleDefinitions/read",
+
+    // General permissions for AKS resource monitoring and security insights
+    "Microsoft.Security/pricings/read",
+    "Microsoft.Security/locations/securityContacts/read",
+    "Microsoft.Security/securityContacts/read",
+    "Microsoft.Security/securitySolutions/read",
+    
+    // View access to logs and monitoring for containers
+    "Microsoft.OperationalInsights/workspaces/read",
+    "Microsoft.OperationalInsights/workspaces/sharedKeys/read",
+    "Microsoft.OperationalInsights/workspaces/query/read",
+    
+    // View AKS managed identities for access and identity management
+    "Microsoft.ManagedIdentity/userAssignedIdentities/read",
+    "Microsoft.ContainerRegistry/registries/read",
+    
+    // Read access to storage accounts and related AKS storage information
+    "Microsoft.Storage/storageAccounts/read",
+    "Microsoft.Storage/storageAccounts/listKeys/action"
+  ],
+  "NotActions": [
+    // Deny any write actions
+    "Microsoft.ContainerService/managedClusters/write",
+    "Microsoft.ContainerService/managedClusters/delete",
+    "Microsoft.ContainerService/managedClusters/agentPools/write",
+    "Microsoft.ContainerService/managedClusters/agentPools/delete",
+    "Microsoft.Resources/deployments/write",
+    "Microsoft.Storage/storageAccounts/write",
+    "Microsoft.ManagedIdentity/userAssignedIdentities/write",
+    "Microsoft.Authorization/roleAssignments/write"
+  ],
+  "AssignableScopes": [
+    // Define scopes where this policy can be assigned
+    "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}",
+    "/subscriptions/{subscription-id}"
+  ]
+}
+
