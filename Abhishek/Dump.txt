@@ -300,6 +300,116 @@ permissions to access
 ]
 
 ----------------------------–---------------------------------------
-iam json policy for aks
+iam json policy for aks READERS ROLE
+
+{
+    "RoleName": "AKS Reader",
+    "Description": "Provides read-only access to Azure Kubernetes Service (AKS) resources.",
+    "Permissions": {
+        "Actions": [
+            "Microsoft.ContainerService/managedClusters/read",
+            "Microsoft.ContainerService/managedClusters/listClusterUserCredentials/action",
+            "Microsoft.ContainerService/managedClusters/listClusterAdminCredentials/action",
+            "Microsoft.ContainerService/operations/read",
+            "Microsoft.Insights/metrics/read",
+            "Microsoft.Insights/logs/read",
+            "Microsoft.Resources/subscriptions/resourceGroups/read",
+            "Microsoft.Network/virtualNetworks/subnets/read",
+            "Microsoft.Authorization/roleAssignments/read"
+        ],
+        "NotActions": [
+            "Microsoft.ContainerService/managedClusters/write",
+            "Microsoft.ContainerService/managedClusters/delete",
+            "Microsoft.ContainerService/managedClusters/runCommand/action"
+        ],
+        "AssignableScopes": [
+            "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}/providers/Microsoft.ContainerService/managedClusters/{aks-cluster-name}"
+        ]
+    }
+}
+
+
+------------------------------------
+
+AKS CONTRIBUTOR ROLE
+
+{
+  "RoleName": "AKS Contributor",
+  "Description": "Provides read, write, delete, and modify permissions for managing Azure Kubernetes Service (AKS) resources. This role does not grant permissions to manage access or assign roles.",
+  "Permissions": {
+    "Actions": [
+      "Microsoft.ContainerService/managedClusters/read",
+      "Microsoft.ContainerService/managedClusters/write",
+      "Microsoft.ContainerService/managedClusters/delete",
+      "Microsoft.ContainerService/managedClusters/upgrade",
+      "Microsoft.ContainerService/managedClusters/scale",
+      "Microsoft.ContainerService/managedClusters/agentPools/read",
+      "Microsoft.ContainerService/managedClusters/agentPools/write",
+      "Microsoft.ContainerService/managedClusters/agentPools/delete",
+      "Microsoft.ContainerService/operations/read",
+      "Microsoft.Authorization/policyAssignments/read",
+      "Microsoft.Insights/metrics/read",
+      "Microsoft.Insights/logs/read",
+      "Microsoft.Network/virtualNetworks/subnets/join/action",
+      "Microsoft.Network/virtualNetworks/subnets/read",
+      "Microsoft.Compute/virtualMachines/read",
+      "Microsoft.Compute/virtualMachines/start/action",
+      "Microsoft.Compute/virtualMachines/restart/action",
+      "Microsoft.Network/networkInterfaces/read",
+      "Microsoft.Network/publicIPAddresses/read"
+    ],
+    "NotActions": [
+      "Microsoft.Authorization/*/write",
+      "Microsoft.Authorization/roleAssignments/*",
+      "Microsoft.Authorization/roleDefinitions/*",
+      "Microsoft.ManagedIdentity/*"
+    ],
+    "AssignableScopes": [
+      "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}",
+      "/subscriptions/{subscription-id}"
+    ]
+  }
+}
+
+
+----------------&&&&&&&&&&&&&&&--------------&&&&-----
+
+AZURE ADMINISTRATOR ROLE
+
+{
+  "RoleName": "AKSAdministrator",
+  "Description": "Provides full administrative access to Azure Kubernetes Service resources, including cluster and network management, scaling, monitoring, and role assignment.",
+  "Permissions": {
+    "Actions": [
+      "Microsoft.ContainerService/managedClusters/read",
+      "Microsoft.ContainerService/managedClusters/write",
+      "Microsoft.ContainerService/managedClusters/delete",
+      "Microsoft.ContainerService/managedClusters/upgrade",
+      "Microsoft.ContainerService/managedClusters/scale",
+      "Microsoft.ContainerService/managedClusters/stop",
+      "Microsoft.ContainerService/managedClusters/start",
+      "Microsoft.ContainerService/agentPools/read",
+      "Microsoft.ContainerService/agentPools/write",
+      "Microsoft.ContainerService/agentPools/delete",
+      "Microsoft.ContainerService/agentPools/scale",
+      "Microsoft.ContainerService/managedClusters/agentPools/read",
+      "Microsoft.ContainerService/managedClusters/agentPools/write",
+      "Microsoft.Authorization/roleAssignments/write",
+      "Microsoft.Authorization/roleAssignments/delete",
+      "Microsoft.Insights/metrics/read",
+      "Microsoft.Insights/metrics/write",
+      "Microsoft.Network/networkSecurityGroups/read",
+      "Microsoft.Network/networkSecurityGroups/write",
+      "Microsoft.Network/virtualNetworks/subnets/join/action",
+      "Microsoft.Network/publicIPAddresses/read",
+      "Microsoft.Network/loadBalancers/read",
+      "Microsoft.Network/loadBalancers/write"
+    ],
+    "NotActions": [],
+    "AssignableScopes": [
+      "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}/providers/Microsoft.ContainerService/managedClusters/{aks-cluster-name}"
+    ]
+  }
+}
 
 
