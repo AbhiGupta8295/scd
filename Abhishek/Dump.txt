@@ -239,3 +239,67 @@ class PolicyGenerator:
     "/subscriptions/{subscription-id}"
   ]
 }
+
+
+--------------------------------------------------------------------
+permissions to access
+[
+  {
+    "RoleName": "Reader",
+    "Description": "Provides read-only access to view all Azure resources.",
+    "Permissions": {
+      "Actions": [
+        "*/read"
+      ],
+      "NotActions": [
+        "*/write",
+        "*/delete",
+        "*/modify"
+      ],
+      "AssignableScopes": [
+        "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}",
+        "/subscriptions/{subscription-id}"
+      ]
+    }
+  },
+  {
+    "RoleName": "Contributor",
+    "Description": "Provides full read, write, and modify access, but does not grant permissions to manage access or assign roles.",
+    "Permissions": {
+      "Actions": [
+        "*/read",
+        "*/write",
+        "*/delete",
+        "*/modify"
+      ],
+      "NotActions": [
+        "Microsoft.Authorization/*/write",
+        "Microsoft.Authorization/roleAssignments/*",
+        "Microsoft.Authorization/roleDefinitions/*"
+      ],
+      "AssignableScopes": [
+        "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}",
+        "/subscriptions/{subscription-id}"
+      ]
+    }
+  },
+  {
+    "RoleName": "Administrator",
+    "Description": "Provides full access to all Azure resources, including permissions to manage access and assign roles.",
+    "Permissions": {
+      "Actions": [
+        "*"
+      ],
+      "NotActions": [],
+      "AssignableScopes": [
+        "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}",
+        "/subscriptions/{subscription-id}"
+      ]
+    }
+  }
+]
+
+----------------------------–---------------------------------------
+iam json policy for aks
+
+
