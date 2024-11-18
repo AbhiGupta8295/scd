@@ -165,18 +165,17 @@ class PolicyGenerator:
 
 ----------------------------------------------------------------------------
 
-
 {
   "Name": "AKSReadOnlyAccess",
   "IsCustom": true,
-  "Description": "Provides read-only access to all aspects of Azure Kubernetes Services (AKS).",
+  "Description": "Provides read-only access to all aspects of Azure Kubernetes Service (AKS) for monitoring and auditing purposes.",
   "Actions": [
-    // Access to view AKS clusters and related metadata
+    // Read access to AKS clusters and configurations
     "Microsoft.ContainerService/managedClusters/read",
     "Microsoft.ContainerService/managedClusters/listClusterAdminCredential/action",
     "Microsoft.ContainerService/managedClusters/listClusterUserCredential/action",
     
-    // View access to network profiles and configurations
+    // Read access to networking resources used by AKS
     "Microsoft.Network/virtualNetworks/read",
     "Microsoft.Network/networkInterfaces/read",
     "Microsoft.Network/publicIPAddresses/read",
@@ -184,47 +183,47 @@ class PolicyGenerator:
     "Microsoft.Network/loadBalancers/read",
     "Microsoft.Network/applicationGateways/read",
 
-    // Access to view AKS node pools
+    // Read access to AKS node pools
     "Microsoft.ContainerService/managedClusters/agentPools/read",
 
-    // Access to view log analytics and monitoring configurations
+    // Read access to Azure Monitor and Log Analytics
     "Microsoft.Insights/metrics/read",
     "Microsoft.Insights/metricDefinitions/read",
     "Microsoft.Insights/logProfiles/read",
     "Microsoft.Insights/diagnosticSettings/read",
     "Microsoft.Insights/actionGroups/read",
 
-    // Access to view resource groups and resources in them
+    // Read access to resource groups and related resources
     "Microsoft.Resources/subscriptions/resourceGroups/read",
     "Microsoft.Resources/deployments/read",
     "Microsoft.Resources/subscriptions/read",
     "Microsoft.Resources/subscriptions/providers/read",
     
-    // Read access to AKS Kubernetes role bindings and RBAC configurations
+    // Read access for Kubernetes RBAC configurations
     "Microsoft.Authorization/roleAssignments/read",
     "Microsoft.Authorization/roleDefinitions/read",
 
-    // General permissions for AKS resource monitoring and security insights
+    // Access for monitoring and security insights
     "Microsoft.Security/pricings/read",
     "Microsoft.Security/locations/securityContacts/read",
     "Microsoft.Security/securityContacts/read",
     "Microsoft.Security/securitySolutions/read",
     
-    // View access to logs and monitoring for containers
+    // Access to container logs and monitoring
     "Microsoft.OperationalInsights/workspaces/read",
     "Microsoft.OperationalInsights/workspaces/sharedKeys/read",
     "Microsoft.OperationalInsights/workspaces/query/read",
     
-    // View AKS managed identities for access and identity management
+    // Read access for managed identities and container registry
     "Microsoft.ManagedIdentity/userAssignedIdentities/read",
     "Microsoft.ContainerRegistry/registries/read",
     
-    // Read access to storage accounts and related AKS storage information
+    // Read access to storage accounts associated with AKS
     "Microsoft.Storage/storageAccounts/read",
     "Microsoft.Storage/storageAccounts/listKeys/action"
   ],
   "NotActions": [
-    // Deny any write actions
+    // Prevent any write, delete, or modify actions
     "Microsoft.ContainerService/managedClusters/write",
     "Microsoft.ContainerService/managedClusters/delete",
     "Microsoft.ContainerService/managedClusters/agentPools/write",
@@ -235,9 +234,8 @@ class PolicyGenerator:
     "Microsoft.Authorization/roleAssignments/write"
   ],
   "AssignableScopes": [
-    // Define scopes where this policy can be assigned
+    // Scope where this policy can be assigned (e.g., at subscription or resource group level)
     "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}",
     "/subscriptions/{subscription-id}"
   ]
 }
-
