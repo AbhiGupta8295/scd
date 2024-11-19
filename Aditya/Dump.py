@@ -113,12 +113,28 @@ class AIModel:
 
             validated_scds = self.validate_scds(response)
 
+            # If we don't get enough SCDs, try one more time with a stronger emphasis
+            if len(validated_scds) < 17:
+                retry_prompt = f"{user_prompt} IMPORTANT: You MUST generate at least 17 SCDs. Current generation only produced {len(validated_scds)}."
+                
+                response_retry = response_chain.invoke({
+                    "control_descriptions": control_descriptions,
+                    "user_prompt": retry_prompt,
+                    "service": service,
+                    "vector_store_controls": control_ids_info,
+                    "scd_template": template_str,
+                    "additional_controls": ", ".join(additional_controls),
+                    "azure_controls": ", ".join(azure_controls)
+                })
+                
+                validated_scds += self.validate_scds(response_retry)
+
             # Add validated SCDs to the list ensuring uniqueness
             for scd in validated_scds:
                 if scd not in scd_list:
                     scd_list.append(scd)
 
-        # Retry if not enough unique SCDs are generated
+        # Check if we have enough unique SCDs generated
         if len(scd_list) < 17:
             raise ValueError("Not enough unique SCDs generated. Please adjust your templates or controls.")
 
@@ -174,4 +190,3 @@ class AIModel:
             return formatted
         
         return ""
-          
