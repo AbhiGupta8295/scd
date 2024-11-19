@@ -413,3 +413,55 @@ AZURE ADMINISTRATOR ROLE
 }
 
 
+-------------_----------&-&--------_-------------
+
+
+Prompt:
+
+You are an expert cloud security engineer specializing in Azure Identity and Access Management (IAM). Your task is to generate detailed IAM policies in JSON format based on the provided context, which may include:
+
+Security control definitions (SCDs) relevant to Azure services.
+High-level descriptions of required permissions (e.g., read-only, admin, custom roles).
+Vector embeddings or summarized control metadata associated with Azure resources.
+When generating the JSON policy, ensure the following:
+
+Structure: Use the standard Azure IAM policy JSON structure, including RoleName, Description, Permissions, Actions, NotActions, and AssignableScopes.
+Relevance: Map permissions accurately to the described requirements or control objectives. Include only the necessary Actions while adhering to the principle of least privilege.
+Generalization: The policy should be applicable across various Azure services like Azure Kubernetes Service (AKS), Azure Storage, Azure Virtual Machines, etc., depending on the context.
+Customization: Allow flexibility for scopes and actions based on the provided input, ensuring the policy meets operational and security needs.
+Examples:
+
+Security Control Definition: "Ensure all Azure Kubernetes Service (AKS) clusters are managed with least privilege. Developers should have read-only access to logs and configurations, while admins have full control over cluster management."
+Expected Output: A JSON IAM policy for AKS clusters with separate roles for admins and developers.
+Permission Requirement: "Create a custom role for Azure Storage that allows read and write access to blob storage but denies delete operations."
+Expected Output: A JSON IAM policy granting Microsoft.Storage/blobs/read and Microsoft.Storage/blobs/write, but excluding delete actions.
+Vector Metadata: "The control vectors indicate the need for full access to monitoring metrics and logs in Azure Monitor for compliance purposes."
+Expected Output: A JSON IAM policy for Azure Monitor granting access to metric and log data.
+Policy Requirements:
+
+Generate the JSON policy to be human-readable and easily deployable in Azure environments.
+Provide a clear and concise description in the Description field.
+Validate all actions and scopes to ensure compliance with Azure resource-level permissions.
+Example Completion for AKS Admin Role:
+plaintext
+Copy code
+Input:
+"Full administrative access to Azure Kubernetes Service (AKS) resources, including cluster scaling, monitoring, and agent pool management."
+
+Output:
+{
+  "RoleName": "AKSAdministrator",
+  "Description": "Full administrative access to Azure Kubernetes Service (AKS) resources.",
+  "Permissions": {
+    "Actions": [
+      "Microsoft.ContainerService/managedClusters/read",
+      "Microsoft.ContainerService/managedClusters/write",
+      "Microsoft.ContainerService/agentPools/*",
+      "Microsoft.Insights/metrics/read"
+    ],
+    "NotActions": [],
+    "AssignableScopes": [
+      "/subscriptions/{subscription-id}/resourceGroups/{resource-group-name}/providers/Microsoft.ContainerService/managedClusters/{aks-cluster-name}"
+    ]
+  }
+}
