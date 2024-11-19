@@ -1,200 +1,254 @@
-from fastapi import APIRouter, HTTPException, File, Form, UploadFile, Depends
-from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel
-from src.model.ai_model import AIModel
-from cachetools import TTLCache
-from datetime import datetime, timedelta
-from typing import List
-import pandas as pd
-import csv
-from io import StringIO
-import markdown
-import re
-import os
-import io
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SCD Policy Generator</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+  </head>
 
-# Initialize the AIModel
-ai_model = AIModel()
-cache = TTLCache(maxsize=100, ttl=1200)
+  <body>
+    <h1>Cloud SCDs & Policies AI-Assist</h1>
 
-# Pydantic models for request and response
-class SCDRequest(BaseModel):
-    user_prompt: str
-    service: str
-    additional_controls: List[str]
-    azure_controls: List[str]
-    benchmark_controls: List[str]
+    <!-- Text Prompt Section -->
+    <div class="section">
+      <h2>Enter your request</h2>
+      <textarea
+        rows="4"
+        id="textPrompt"
+        placeholder="Type your prompt here..."
+      ></textarea>
+    </div>
 
-class SCDResponse(BaseModel):
-    scd: str
+    <p class="clickable">
+      Generate SCD based on Custom Organisation Policy? Upload File
+    </p>
 
-class FormatRequest(BaseModel):
-    scd: str
-    format: str
-    filename: str
+    <!-- Upload a custom dataset -->
+    <div class="uploadFile section">
+      <h2>Upload a file</h2>
+      <div class="uploadFile">
+        <form id="uploadForm">
+          <input type="file" id="fileInput" />
+          <p id="errorMessage" style="color: red"></p>
+          <button type="submit" id="uploadFileBtn">Upload</button>
+        </form>
+      </div>
+    </div>
 
-# Create a router object
-router = APIRouter()
+    <!-- Main Buttons Section -->
+    <div class="section">
+      <button id="scdButton">Generate SCDs</button>
+      <button id="policyButton">Generate Cloud Policy</button>
+    </div>
 
-@router.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI application"}
+    <br />
 
-# Simulated session check
-async def check_session(request):
-    return True
+    <!-- Loader Section -->
+    <div class="section hidden" id="loader">
+      <p>Generating SCDs.. Please wait..</p>
+    </div>
 
-@router.post("/upload")
-async def handle_file_upload(
-    user_prompt: str = Form(...),
-    service: str = Form(...),
-    additional_controls: List[str] = Form(None),
-    file: UploadFile = File(...),
-    session_valid: bool = Depends(check_session),
-):
-    if not session_valid:
-        raise HTTPException(status_code=401, detail="Session expired. Please log in again.")
+    <!-- Response Display Section -->
+    <div class="section hidden" id="ResponseDisplay">
+      <h2>SCDs Response</h2>
+      <textarea
+        rows="15"
+        id="responseOutput"
+        readonly
+        placeholder="The AI response will appear here..."
+      ></textarea>
 
-    # Ensure the file type is either CSV or Markdown
-    if file.content_type == "text/csv":
-        # Process CSV file
-        contents = await file.read()
-        csv_data = StringIO(contents.decode('utf-8'))
-        reader = csv.DictReader(csv_data)
-        data_list = [row for row in reader]  # Extract CSV rows as a list of dicts
+      <hr />
 
-        # Generate payload for CSV file
-        generated_payload = {
-            "file_type": "CSV",
-            "data_summary": data_list[:2],  # Summary of first two rows
-            "file_name": file.filename,
+      <!-- File Export Section -->
+      <div class="section">
+        <h2>Export File</h2>
+        <label>Enter Export filename</label>
+        <br /><br />
+        <input
+          type="text"
+          id="filename"
+          placeholder="Enter filename"
+          style="
+            width: 95%;
+            border-radius: 5pt;
+            background-color: #2d2d2d;
+            color: white;
+            padding: 5pt;
+          "
+        />
+
+        <br /><br />
+
+        <h3>Choose File Format:</h3>
+        <input type="radio" name="fileType" value="md" /> .md <br />
+        <input type="radio" name="fileType" value="csv" /> .csv <br />
+        <input type="radio" name="fileType" value="xlsx" /> .xlsx <br /><br />
+
+        <button id="downloadButton">Download File</button>
+      </div>
+    </div>
+
+    <!-- Error Message Display Section -->
+    <div id="errorMessage"></div>
+    <div id="successMessage"></div>
+
+    <script>
+      // Show or hide loader
+      function toggleLoader(show) {
+        document.getElementById("loader").classList.toggle("hidden", !show);
+      }
+
+      // Show response section only after data arrives
+      function showResponseSection() {
+        document.getElementById("ResponseDisplay").classList.remove("hidden");
+      }
+
+      // Function to validate input fields and show error messages
+      function validatePromptInput() {
+        const textPrompt =
+          document.getElementById("textPrompt").value.trim() !== "";
+        const errorMessageDiv = document.getElementById("errorMessage");
+        errorMessageDiv.innerHTML = "";
+        if (!textPrompt) {
+          errorMessageDiv.innerHTML = "Error: Please enter a text prompt.";
+          return false;
         }
-    elif file.content_type == "text/markdown":
-        # Process Markdown file
-        contents = await file.read()
-        md_content = contents.decode('utf-8')
+        return true;
+      }
 
-        # Generate payload for Markdown file
-        generated_payload = {
-            "file_type": "Markdown",
-            "content_preview": md_content[:200],  # Preview of first 200 characters
-            "file_name": file.filename,
-        }
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported file type. Only CSV and Markdown files are allowed.")
+      // Send SCD Request
+      document
+        .getElementById("scdButton")
+        .addEventListener("click", async () => {
+          if (validatePromptInput()) {
+            toggleLoader(true);
+            const prompt = document.getElementById("textPrompt").value;
 
-    # Store the generated payload in the cache
-    cache[file.filename] = generated_payload
+            const requestData = {
+              user_prompt: prompt,
+              service: "",
+              additional_controls: [
+                "Tagging",
+                "Naming Convention",
+                "Traffic Management",
+              ],
+              azure_controls: [
+                "HTTP to HTTPS Redirection",
+                "Threat Detection & Mitigation",
+                "SSL/TLS Termination",
+                "Application Gateway Logging",
+                "Geo-Restriction",
+                "Authentication and Authorization",
+                "Cluster Network Security",
+                "Pod Security Policies (PSPs)",
+                "Node Security",
+                "Auto-scaling Security",
+                "Image Pull Policy",
+                "Remote Desktop Protocol (RDP) Security",
+                "Function Timeout and Throttling",
+              ],
+              benchmark_controls: [
+                "Identity & Access Management",
+                "Network Security",
+                "Data Security & Encryption",
+                "Logging and Monitoring",
+                "Posture and Vulnerability Management",
+                "Backup and Recovery",
+              ],
+            };
 
-    # Combine the file payload with the SCD payload from the form
-    scd_payload = {
-        "user_prompt": user_prompt,
-        "service": service,
-        "additional_controls": additional_controls,
-    }
+            try {
+              const response = await fetch(
+                "http://127.0.0.1:8000/generate-scd",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(requestData),
+                }
+              );
 
-    # Example response combining file payload and SCD payload
-    response = {
-        "message": f"File '{file.filename}' uploaded successfully!",
-        "file_payload": generated_payload,
-        "scd_payload": scd_payload,
-        "cached": True,
-    }
+              toggleLoader(false);
 
-    return JSONResponse(content=response)
+              if (response.ok) {
+                const responseData = await response.json();
+                document.getElementById("responseOutput").value =
+                  responseData.scd || "No SCD data found in response.";
+                showResponseSection();
+              } else {
+                const errorText = await response.text();
+                document.getElementById("responseOutput").value =
+                  `Error: ${response.status} - ${response.statusText}. ` +
+                  `Details: ${errorText}`;
+              }
+            } catch (error) {
+              toggleLoader(false);
+              document.getElementById("responseOutput").value =
+                "Request failed: " + error.message;
+            }
+          }
+        });
 
-@router.post("/generate-scd", response_model=SCDResponse)
-def generate_scd(request: SCDRequest):
-    # Extract inputs from the request
-    user_prompt = request.user_prompt
-    service = request.service
-    additional_controls = request.additional_controls
-    azure_controls = request.azure_controls
-    benchmark_controls = request.benchmark_controls
+      // Download File Event
+      document
+        .getElementById("downloadButton")
+        .addEventListener("click", async () => {
+          const filename = document.getElementById("filename").value.trim();
+          const fileType = document.querySelector(
+            "input[name='fileType']:checked"
+          );
+          const scdContent = document.getElementById("responseOutput").value;
 
-    if not user_prompt:
-        raise HTTPException(status_code=400, detail="User prompt is required")
+          if (!filename) {
+            document.getElementById("errorMessage").textContent =
+              "Please enter a filename.";
+            return;
+          }
+          if (!fileType) {
+            document.getElementById("errorMessage").textContent =
+              "Please select a file format.";
+            return;
+          }
 
-    # Generate the SCD using the AI model
-    try:
-        scd = ai_model.generate_scd(
-            user_prompt=user_prompt,
-            service=service,
-            additional_controls=additional_controls,
-            azure_controls=azure_controls,
-            benchmark_controls=benchmark_controls,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate SCD: {str(e)}")
+          const requestData = {
+            scd: scdContent,
+            format: fileType.value,
+            filename: filename,
+          };
 
-    return SCDResponse(scd=scd)
+          try {
+            const response = await fetch("http://127.0.0.1:8000/convert-scd", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestData),
+            });
 
-@router.post("/convert-scd")
-def convert_scd(request: FormatRequest):
-    scd = request.scd
-    format = request.format.lower()
-    filename = request.filename
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `${filename}.${fileType.value}`;
+              link.click();
+              window.URL.revokeObjectURL(url);
+            } else {
+              document.getElementById("errorMessage").textContent =
+                "Error in file conversion.";
+            }
+          } catch (error) {
+            document.getElementById("errorMessage").textContent =
+              "Request failed: " + error.message;
+          }
+        });
 
-    if format not in ["csv", "xlsx", "md"]:
-        raise HTTPException(status_code=400, detail="Invalid format specified. Choose from 'csv', 'xlsx', or 'md'.")
+      // Toggle Upload Section
+      const paragraph = document.querySelector("p.clickable");
+      const uploadSection = document.querySelector(".uploadFile.section");
 
-    # Save the SCD to the desired format
-    output_file_path = f"{filename}.{format}"
-    save_scd(scd, output_file_path, format)
-
-    # Serve the file as a download
-    return serve_file(output_file_path, format, filename)
-
-def save_scd(scd, output_file_path, format='md'):
-    scd_entries = re.split(r'\n\s*\n', scd.strip())
-
-    if format == 'md':
-        table_headers = ["Control ID", "Control Domain", "Control Title", "Mapping to NIST CSF v1.1 control", "Client Requirement if Any", "Policy Name", "Policy Description", "Responsibility", "Frequency", "Evidence", "Implementation Details"]
-        with open(output_file_path, 'w') as f:
-            f.write(f"| {' | '.join(table_headers)} |\n")
-            f.write(f"| {' | '.join(['-' * len(header) for header in table_headers])} |\n")
-
-            # Write each entry as a table row
-            for entry in scd_entries:
-                entry_data = parse_entry(entry)
-                row = "| " + " | ".join(entry_data.get(header, '') for header in table_headers) + " |\n"
-                f.write(row)
-
-    elif format in ['csv', 'xlsx']:
-        csv_data = []
-        for entry in scd_entries:
-            csv_data.append(parse_entry(entry))
-
-        df = pd.DataFrame(csv_data)
-        if format == 'csv':
-            df.to_csv(output_file_path, index=False)
-        else:
-            df.to_excel(output_file_path, index=False)
-    else:
-        raise ValueError(f"Unsupported format: {format}")
-
-def parse_entry(entry):
-    """Parse individual SCD entry into a dictionary"""
-    entry_data = {}
-    for line in entry.splitlines():
-        if ':' in line:
-            key, value = line.split(':', 1)
-            entry_data[key.strip()] = value.strip()
-    return entry_data
-
-def serve_file(file_path, format, filename):
-    media_type = {
-        'csv': "text/csv",
-        'xlsx': "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        'md': "text/markdown",
-    }.get(format)
-
-    if not media_type:
-        raise ValueError(f"Unsupported format: {format}")
-
-    with open(file_path, 'rb') as f:
-        stream = io.BytesIO(f.read())
-        stream.seek(0)
-        response = StreamingResponse(stream, media_type=media_type)
-        response.headers["Content-Disposition"] = f"attachment; filename={filename}.{format}"
-        return response
+      paragraph.addEventListener("click", () => {
+        uploadSection.style.display = "block";
+      });
+    </script>
+  </body>
+</html>
