@@ -1,10 +1,17 @@
-FROM python:3.9-slim
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-WORKDIR /app
+DATABASE_URL = "postgresql://user:password@postgres:5432/vector_db"
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+# Create a database engine
+engine = create_engine(DATABASE_URL)
 
-COPY app.py .
+# Session maker
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-CMD ["python", "app.py"]
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
