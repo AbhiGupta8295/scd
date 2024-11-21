@@ -1,7 +1,17 @@
 import os
+import csv
+import openai
 import psycopg2
 
-def create_vector_table():
+def generate_embedding(text):
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    response = openai.Embedding.create(
+        input=text,
+        model="text-embedding-ada-002"
+    )
+    return response['data'][0]['embedding']
+
+def insert_csv_into_vector_table(csv_path):
     # Database connection details
     DB_HOST = os.getenv("DB_HOST", "localhost")
     DB_PORT = os.getenv("DB_PORT", "5432")
@@ -19,20 +29,36 @@ def create_vector_table():
     )
     cursor = conn.cursor()
 
-    # Create a table for vector embeddings
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS azure_security_benchmarks (
-            id SERIAL PRIMARY KEY,
-            service_name TEXT,
-            control_title TEXT,
-            guidance TEXT,
-            responsibility TEXT,
-            feature_name TEXT,
-            feature_description TEXT,
-            embedding VECTOR(1536)  -- Adjust the dimension to OpenAI embedding size
-        );
-    """)
-    conn.commit()
+    # Open the CSV file and iterate over rows
+    with open(csv_path, newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            # Combine relevant columns for embeddings
+            combined_text = f"{row['Service Name']}. {row['Guidance']}. {row['Feature Description']}"
+            embedding = generate_embedding(combined_text)
+
+            # Insert into the table
+            cursor.execute("""
+                INSERT INTO azure_security_benchmarks (
+                    service_name,
+                    control_title,
+                    guidance,
+                    responsibility,
+                    feature_name,
+                    feature_description,
+                    embedding
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                row['Service Name'],
+                row['ASB Control Title'],
+                row['Guidance'],
+                row['Responsibility'],
+                row['Feature Name'],
+                row['Feature Description'],
+                embedding
+            ))
+            conn.commit()
+
     cursor.close()
     conn.close()
-    print("Table 'azure_security_benchmarks' created successfully.")
+    print("Data successfully inserted into 'azure_security_benchmarks' table.")
