@@ -1,31 +1,10 @@
-version: '3.8'
+FROM python:3.9-slim
 
-services:
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
+WORKDIR /app
 
-  grafana:
-    image: grafana/grafana
-    container_name: grafana
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    ports:
-      - "3000:3000"
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-  node-exporter:
-    image: prom/node-exporter
-    container_name: node-exporter
-    ports:
-      - "9100:9100"
+COPY app.py .
 
-  webserver:
-    build:
-      context: ./webserver
-    container_name: webserver
-    ports:
-      - "8080:8080"
+CMD ["python", "app.py"]
