@@ -1,17 +1,26 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+version: "3.8"
 
-DATABASE_URL = "postgresql://user:password@postgres:5432/vector_db"
+services:
+  postgres:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vector_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
-# Create a database engine
-engine = create_engine(DATABASE_URL)
+  backend:
+    build:
+      context: .
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/vector_db
 
-# Session maker
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+volumes:
+  postgres_data:
