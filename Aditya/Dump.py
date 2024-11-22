@@ -1,14 +1,21 @@
-from embeddings import generate_embedding
-from models import insert_data
-from utils import read_csv
+from database import get_db_connection
+from loguru import logger
 
-def process_csv(file_path):
+def insert_data(service_name, control_domain, embedding):
     """
-    Process the CSV, generate embeddings, and insert into the database.
+    Insert data into the database.
+    Avoid duplicates with ON CONFLICT.
     """
-    data = read_csv(file_path)
-    for service_name, control_domain in data:
-        text = f"{service_name}, {control_domain}"
-        embedding = generate_embedding(text)
-        if embedding:
-            insert_data(service_name, control_domain, embedding)
+    query = """
+        INSERT INTO azure_security (service_name, control_domain, embedding)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (service_name, control_domain) DO NOTHING;
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(query, (service_name, control_domain, embedding))
+                conn.commit()
+                logger.info(f"Inserted/Skipped: {service_name}, {control_domain}")
+            except Exception as e:
+                logger.error(f"Error inserting data: {e}")
