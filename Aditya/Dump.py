@@ -1,21 +1,17 @@
-from database import get_db_connection
+import csv
 from loguru import logger
 
-def insert_data(service_name, control_domain, embedding):
+def read_csv(file_path):
     """
-    Insert data into the database.
-    Avoid duplicates with ON CONFLICT.
+    Read the CSV file and return the data.
     """
-    query = """
-        INSERT INTO azure_security (service_name, control_domain, embedding)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (service_name, control_domain) DO NOTHING;
-    """
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            try:
-                cursor.execute(query, (service_name, control_domain, embedding))
-                conn.commit()
-                logger.info(f"Inserted/Skipped: {service_name}, {control_domain}")
-            except Exception as e:
-                logger.error(f"Error inserting data: {e}")
+    data = []
+    try:
+        with open(file_path, mode="r") as file:
+            csv_reader = csv.DictReader(file)
+            for row in csv_reader:
+                data.append((row["Service Name"], row["Control Domain"]))
+        logger.info(f"Read {len(data)} rows from CSV.")
+    except Exception as e:
+        logger.error(f"Error reading CSV file: {e}")
+    return data
