@@ -1,36 +1,21 @@
-import psycopg2
-from loguru import logger
+import openai
 from config import Config
+from loguru import logger
 
-def get_db_connection():
-    """Create a database connection."""
+openai.api_key = Config.OPENAI_API_KEY
+
+def generate_embedding(text):
+    """
+    Generate embeddings using OpenAI.
+    :param text: Text for embedding generation
+    :return: Embedding vector
+    """
     try:
-        conn = psycopg2.connect(
-            dbname=Config.DB_NAME,
-            user=Config.DB_USER,
-            password=Config.DB_PASSWORD,
-            host=Config.DB_HOST,
-            port=Config.DB_PORT,
+        response = openai.Embedding.create(
+            input=text,
+            model="text-embedding-ada-002"
         )
-        return conn
+        return response["data"][0]["embedding"]
     except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+        logger.error(f"Error generating embedding: {e}")
         raise
-
-def create_table():
-    """Create the necessary table and enable pgvector."""
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                CREATE EXTENSION IF NOT EXISTS vector;
-
-                CREATE TABLE IF NOT EXISTS azure_security (
-                    id SERIAL PRIMARY KEY,
-                    service_name TEXT NOT NULL,
-                    control_domain TEXT NOT NULL,
-                    embedding VECTOR(1536),
-                    UNIQUE (service_name, control_domain)
-                );
-            """)
-            conn.commit()
-            logger.info("Database table created.")
