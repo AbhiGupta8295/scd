@@ -1,21 +1,21 @@
-import openai
-from config import Config
+from database import get_db_connection
 from loguru import logger
 
-openai.api_key = Config.OPENAI_API_KEY
-
-def generate_embedding(text):
+def insert_data(service_name, control_domain, embedding):
     """
-    Generate embeddings using OpenAI.
-    :param text: Text for embedding generation
-    :return: Embedding vector
+    Insert data into the database.
+    Avoid duplicates with ON CONFLICT.
     """
-    try:
-        response = openai.Embedding.create(
-            input=text,
-            model="text-embedding-ada-002"
-        )
-        return response["data"][0]["embedding"]
-    except Exception as e:
-        logger.error(f"Error generating embedding: {e}")
-        raise
+    query = """
+        INSERT INTO azure_security (service_name, control_domain, embedding)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (service_name, control_domain) DO NOTHING;
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(query, (service_name, control_domain, embedding))
+                conn.commit()
+                logger.info(f"Inserted/Skipped: {service_name}, {control_domain}")
+            except Exception as e:
+                logger.error(f"Error inserting data: {e}")
